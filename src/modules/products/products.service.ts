@@ -68,6 +68,35 @@ export class ProductsService {
     return product;
   }
 
+  async findBySlug(slug: string) {
+    if (!slug || typeof slug !== 'string') {
+      throw new BadRequestException('Invalid product slug');
+    }
+
+    const product = await this.prisma.products.findUnique({
+      where: { slug },
+      include: {
+        product_translations: {
+          where: { locale: 'en' }, // Default to English
+          take: 1
+        },
+        product_categories: {
+          include: {
+            categories: true
+          }
+        },
+        product_variations: true,
+        product_options: true,
+      }
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    return product;
+  }
+
   async update(id: number, updateProductDto: UpdateProductDto) {
     // Validation to ensure id is a valid positive integer
     if (isNaN(id) || id <= 0 || !Number.isInteger(id)) {
@@ -92,109 +121,124 @@ export class ProductsService {
 
   // Product Search Functionality
   async searchProducts(searchDto: SearchProductsDto) {
-    const {
-      q,
-      category,
-      minPrice,
-      maxPrice,
-      page = 1,
-      limit = 10,
-      sortBy = 'created_at',
-      sortOrder = 'desc'
-    } = searchDto;
+    try {
+      const {
+        q,
+        category,
+        minPrice,
+        maxPrice,
+        page = 1,
+        limit = 10,
+        sortBy = 'created_at',
+        sortOrder = 'desc'
+      } = searchDto;
 
-    // Build where clause
-    const whereClause: any = {
-      is_active: true,
-    };
+      // Build where clause
+      const whereClause: any = {
+        is_active: true,
+      };
 
-    // Add search query condition
-    if (q) {
-      whereClause.OR = [
-        {
-          product_translations: {
-            some: {
-              name: { contains: q, mode: 'insensitive' },
+      // Add search query condition - MySQL compatible approach
+      if (q) {
+        // For MySQL, we use contains which does case-insensitive search by default in most collations
+        whereClause.OR = [
+          {
+            product_translations: {
+              some: {
+                name: { contains: q },
+              },
             },
           },
-        },
-        {
-          product_translations: {
-            some: {
-              description: { contains: q, mode: 'insensitive' },
+          {
+            product_translations: {
+              some: {
+                description: { contains: q },
+              },
             },
           },
-        },
-        {
-          slug: { contains: q, mode: 'insensitive' },
-        },
-      ];
-    }
+          {
+            slug: { contains: q },
+          },
+        ];
+      }
 
-    // Add category condition
-    if (category) {
-      whereClause.product_categories = {
-        some: {
-          categories: {
-            slug: { equals: category }
+      // Add category condition
+      if (category) {
+        whereClause.product_categories = {
+          some: {
+            categories: {
+              slug: { equals: category }
+            }
+          }
+        };
+      }
+
+      // Add price range condition
+      if (minPrice !== undefined) {
+        whereClause.price = {
+          gte: minPrice,
+        };
+      }
+      if (maxPrice !== undefined) {
+        if (whereClause.price) {
+          whereClause.price.lte = maxPrice;
+        } else {
+          whereClause.price = { lte: maxPrice };
+        }
+      }
+
+      // Calculate pagination
+      const skip = (page - 1) * limit;
+
+      // Build include clause for translations and categories
+      const includeClause: any = {
+        product_translations: {
+          where: { locale: 'en' },
+          take: 1
+        },
+        product_categories: {
+          include: {
+            categories: true
           }
         }
       };
-    }
 
-    // Add price range condition
-    if (minPrice !== undefined) {
-      whereClause.price = {
-        gte: minPrice,
-        ...(whereClause.price ? { ...whereClause.price } : {}),
-      };
-    }
-    if (maxPrice !== undefined) {
-      whereClause.price = {
-        ...(whereClause.price || {}),
-        lte: maxPrice,
-      };
-    }
-
-    // Calculate pagination
-    const skip = (page - 1) * limit;
-
-    // Build include clause for translations and categories
-    const includeClause = {
-      product_translations: {
-        where: { locale: 'en' }, // Default to English
-        take: 1
-      },
-      product_categories: {
-        include: {
-          categories: true
-        }
+      // Build orderBy clause - avoid ordering by translations if not searching by name
+      const orderByClause: any = {};
+      if (sortBy === 'name') {
+        // Skip ordering by name as it requires joining translations
+        orderByClause.created_at = 'desc';
+      } else if (sortBy === 'price') {
+        orderByClause.price = sortOrder;
+      } else {
+        orderByClause[sortBy] = sortOrder;
       }
-    };
 
-    // Execute query
-    const [products, total] = await Promise.all([
-      this.prisma.products.findMany({
-        where: whereClause,
-        include: includeClause,
-        skip,
-        take: limit,
-        orderBy: {
-          [sortBy]: sortOrder,
+      // Execute query
+      const [products, total] = await Promise.all([
+        this.prisma.products.findMany({
+          where: whereClause,
+          include: includeClause,
+          skip,
+          take: limit,
+          orderBy: orderByClause,
+        }),
+        this.prisma.products.count({ where: whereClause }),
+      ]);
+
+      return {
+        data: products,
+        meta: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
         },
-      }),
-      this.prisma.products.count({ where: whereClause }),
-    ]);
-
-    return {
-      data: products,
-      meta: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    };
+      };
+    } catch (error) {
+      console.error('Search error:', error);
+      throw error;
+    }
   }
 
   // Cart Management Functionality

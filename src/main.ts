@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
-import { HTTPExceptionFilter } from './common/filters/http-exception.filter';
+import { HTTPExceptionFilter, AllExceptionsFilter } from './common/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -10,7 +10,7 @@ async function bootstrap() {
 
   app.use(cookieParser())
 
-  app.useGlobalPipes(new ValidationPipe({ 
+  app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     transform: true,
   }));
@@ -18,6 +18,7 @@ async function bootstrap() {
   app.useGlobalFilters(
     new PrismaExceptionFilter(),
     new HTTPExceptionFilter(),
+    new AllExceptionsFilter(),
   );
   app.enableCors({
     origin: ['http://localhost:3001'], // Next.js frontend URL

@@ -199,6 +199,12 @@ export class ProductsController {
     return this.productsService.getUserBookmarks(userId);
   }
 
+  // Get product by slug (for SEO-friendly URLs) - MUST be before :id/is-bookmarked
+  @Get(':slug')
+  findOneBySlug(@Param('slug') slug: string) {
+    return this.productsService.findBySlug(slug);
+  }
+
   @Get(':id/is-bookmarked')
   @UseGuards(JwtAuthGuard)
   isBookmarked(@Request() req, @Param('id') productId: string) {
@@ -213,17 +219,6 @@ export class ProductsController {
     }
 
     return this.productsService.isBookmarked(userId, parsedProductId);
-  }
-
-   @Get(':id')
-  findOne(@Param('id') id: string) {
-    const productId = parseInt(id, 10);
-
-    if (isNaN(productId) || productId <= 0) {
-      throw new BadRequestException('Invalid product ID');
-    }
-
-    return this.productsService.findOne(productId);
   }
 }
 
