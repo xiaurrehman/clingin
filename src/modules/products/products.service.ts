@@ -27,7 +27,7 @@ export class ProductsService {
       include: {
         product_translations: {
           where: { locale: 'en' }, // Default to English
-          take: 1
+          
         },
         product_categories: {
           include: {

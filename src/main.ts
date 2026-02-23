@@ -10,7 +10,10 @@ async function bootstrap() {
 
   app.use(cookieParser())
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  app.useGlobalPipes(new ValidationPipe({ 
+    whitelist: true,
+    transform: true,
+  }));
 
   app.useGlobalFilters(
     new PrismaExceptionFilter(),
@@ -20,7 +23,7 @@ async function bootstrap() {
     origin: ['http://localhost:3001'], // Next.js frontend URL
     credentials: true,                // allows cookies to be sent
   });
- 
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
