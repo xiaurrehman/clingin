@@ -23,6 +23,15 @@ export class SearchProductsDto {
   maxPrice?: number;
 
   @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  is_shortage?: boolean;
+
+  @IsOptional()
   @IsNumber()
   @Min(1)
   @Type(() => Number)

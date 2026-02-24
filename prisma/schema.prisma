@@ -823,52 +823,64 @@ model product_variations {
 }
 
 model products {
-  id                                                                      Int                    @id @default(autoincrement()) @db.UnsignedInt
-  brand_id                                                                Int?                   @db.UnsignedInt
-  tax_class_id                                                            Int?                   @db.UnsignedInt
-  slug                                                                    String                 @unique(map: "products_slug_unique")
-  price                                                                   Decimal?               @db.Decimal(18, 4)
-  special_price                                                           Decimal?               @db.Decimal(18, 4)
-  special_price_type                                                      String?
-  special_price_start                                                     DateTime?              @db.Date
-  special_price_end                                                       DateTime?              @db.Date
-  selling_price                                                           Decimal?               @db.Decimal(18, 4)
-  sku                                                                     String?
-  manage_stock                                                            Boolean                @default(false)
-  qty                                                                     Int?
-  in_stock                                                                Boolean                @default(true)
-  viewed                                                                  Int                    @default(0) @db.UnsignedInt
-  is_active                                                               Boolean
-  new_from                                                                DateTime?              @db.DateTime(0)
-  new_to                                                                  DateTime?              @db.DateTime(0)
-  deleted_at                                                              DateTime?              @db.Timestamp(0)
-  created_at                                                              DateTime?              @db.Timestamp(0)
-  updated_at                                                              DateTime?              @db.Timestamp(0)
-  is_virtual                                                              Boolean                @default(false)
-  shortage                                                                Boolean                @default(false)
-  shortage_reason                                                         String?                @db.Text
-  shortage_start                                                          DateTime?              @db.Date
-  shortage_end                                                            DateTime?              @db.Date
-  alternate                                                               String?
-  coupon_products                                                         coupon_products[]
-  cross_sell_products_cross_sell_products_cross_sell_product_idToproducts cross_sell_products[]  @relation("cross_sell_products_cross_sell_product_idToproducts")
-  cross_sell_products_cross_sell_products_product_idToproducts            cross_sell_products[]  @relation("cross_sell_products_product_idToproducts")
-  flash_sale_products                                                     flash_sale_products[]
-  order_products                                                          order_products[]
-  product_attributes                                                      product_attributes[]
-  product_categories                                                      product_categories[]
-  product_options                                                         product_options[]
-  product_tags                                                            product_tags[]
-  product_translations                                                    product_translations[]
-  product_variants                                                        product_variants[]
-  product_variations                                                      product_variations[]
-  brands                                                                  brands?                @relation(fields: [brand_id], references: [id], onUpdate: Restrict, map: "products_brand_id_foreign")
-  related_products_related_products_product_idToproducts                  related_products[]     @relation("related_products_product_idToproducts")
-  related_products_related_products_related_product_idToproducts          related_products[]     @relation("related_products_related_product_idToproducts")
-  reviews                                                                 reviews[]
-  up_sell_products_up_sell_products_product_idToproducts                  up_sell_products[]     @relation("up_sell_products_product_idToproducts")
-  up_sell_products_up_sell_products_up_sell_product_idToproducts          up_sell_products[]     @relation("up_sell_products_up_sell_product_idToproducts")
-  wish_lists                                                              wish_lists[]
+  id                                                                           Int                     @id @default(autoincrement()) @db.UnsignedInt
+  brand_id                                                                     Int?                    @db.UnsignedInt
+  tax_class_id                                                                 Int?                    @db.UnsignedInt
+  slug                                                                         String                  @unique(map: "products_slug_unique")
+  price                                                                        Decimal?                @db.Decimal(18, 4)
+  special_price                                                                Decimal?                @db.Decimal(18, 4)
+  special_price_type                                                           String?
+  special_price_start                                                          DateTime?               @db.Date
+  special_price_end                                                            DateTime?               @db.Date
+  selling_price                                                                Decimal?                @db.Decimal(18, 4)
+  sku                                                                          String?
+  dosage_form_pack_size                                                        String?
+  product_code                                                                 String?
+  over_labelled                                                                Boolean                 @default(false)
+  manufacturer                                                                 String?
+  country_of_license                                                           String?
+  license_holder                                                               String?
+  license_number                                                               String?
+  controlled_drug_status                                                       String?
+  expiry_date                                                                  String?
+  cytotoxic                                                                    Boolean                 @default(false)
+  storage                                                                      String?
+  manage_stock                                                                 Boolean                 @default(false)
+  qty                                                                          Int?
+  in_stock                                                                     Boolean                 @default(true)
+  viewed                                                                       Int                     @default(0) @db.UnsignedInt
+  is_active                                                                    Boolean
+  is_shortage                                                                  Boolean                 @default(false)
+  shortage_reason                                                              String?                 @db.Text
+  shortage_start_date                                                          DateTime?               @db.DateTime(0)
+  shortage_end_date                                                            DateTime?               @db.DateTime(0)
+  new_from                                                                     DateTime?               @db.DateTime(0)
+  new_to                                                                       DateTime?               @db.DateTime(0)
+  deleted_at                                                                   DateTime?               @db.Timestamp(0)
+  created_at                                                                   DateTime?               @db.Timestamp(0)
+  updated_at                                                                   DateTime?               @db.Timestamp(0)
+  is_virtual                                                                   Boolean                 @default(false)
+  coupon_products                                                              coupon_products[]
+  cross_sell_products_cross_sell_products_cross_sell_product_idToproducts      cross_sell_products[]   @relation("cross_sell_products_cross_sell_product_idToproducts")
+  cross_sell_products_cross_sell_products_product_idToproducts                 cross_sell_products[]   @relation("cross_sell_products_product_idToproducts")
+  flash_sale_products                                                          flash_sale_products[]
+  order_products                                                               order_products[]
+  product_attributes                                                           product_attributes[]
+  product_categories                                                           product_categories[]
+  product_options                                                              product_options[]
+  product_tags                                                                 product_tags[]
+  product_translations                                                         product_translations[]
+  product_variants                                                             product_variants[]
+  product_variations                                                           product_variations[]
+  brands                                                                       brands?                 @relation(fields: [brand_id], references: [id], onUpdate: Restrict, map: "products_brand_id_foreign")
+  related_products_related_products_product_idToproducts                       related_products[]      @relation("related_products_product_idToproducts")
+  related_products_related_products_related_product_idToproducts               related_products[]      @relation("related_products_related_product_idToproducts")
+  reviews                                                                      reviews[]
+  shortage_alternatives_shortage_alternatives_alternative_product_idToproducts shortage_alternatives[] @relation("shortage_alternatives_alternative_product_idToproducts")
+  shortage_alternatives_shortage_alternatives_product_idToproducts             shortage_alternatives[] @relation("shortage_alternatives_product_idToproducts")
+  up_sell_products_up_sell_products_product_idToproducts                       up_sell_products[]      @relation("up_sell_products_product_idToproducts")
+  up_sell_products_up_sell_products_up_sell_product_idToproducts               up_sell_products[]      @relation("up_sell_products_up_sell_product_idToproducts")
+  wish_lists                                                                   wish_lists[]
 
   @@index([brand_id], map: "products_brand_id_foreign")
 }
@@ -1162,6 +1174,7 @@ model users {
   email             String              @unique(map: "users_email_unique")
   phone             String
   password          String
+  api_token         String?             @unique(map: "users_api_token_unique") @db.VarChar(80)
   permissions       String?             @db.Text
   last_login        DateTime?           @db.DateTime(0)
   created_at        DateTime?           @db.Timestamp(0)
@@ -1255,4 +1268,16 @@ model wish_lists {
 
   @@id([user_id, product_id])
   @@index([product_id], map: "wish_lists_product_id_foreign")
+}
+
+model shortage_alternatives {
+  product_id                                                      Int       @db.UnsignedInt
+  alternative_product_id                                          Int       @db.UnsignedInt
+  created_at                                                      DateTime? @db.Timestamp(0)
+  updated_at                                                      DateTime? @db.Timestamp(0)
+  products_shortage_alternatives_alternative_product_idToproducts products  @relation("shortage_alternatives_alternative_product_idToproducts", fields: [alternative_product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "shortage_alternatives_alternative_product_id_foreign")
+  products_shortage_alternatives_product_idToproducts             products  @relation("shortage_alternatives_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "shortage_alternatives_product_id_foreign")
+
+  @@id([product_id, alternative_product_id])
+  @@index([alternative_product_id], map: "shortage_alternatives_alternative_product_id_foreign")
 }

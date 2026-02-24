@@ -27,13 +27,156 @@ export class ProductsService {
       include: {
         product_translations: {
           where: { locale: 'en' }, // Default to English
-          
+          take: 1
         },
         product_categories: {
           include: {
             categories: true
           }
-        }
+        },
+        product_variants: true,
+        product_variations: {
+          include: {
+            variations: true
+          }
+        },
+        product_options: {
+          include: {
+            options: {
+              include: {
+                option_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_attributes: {
+          include: {
+            attributes: {
+              include: {
+                attribute_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_tags: {
+          include: {
+            tags: {
+              include: {
+                tag_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        brands: true,
+        // Related products (alternatives)
+        related_products_related_products_product_idToproducts: {
+          include: {
+            products_related_products_related_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        related_products_related_products_related_product_idToproducts: {
+          include: {
+            products_related_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Up-sell products
+        up_sell_products_up_sell_products_product_idToproducts: {
+          include: {
+            products_up_sell_products_up_sell_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        up_sell_products_up_sell_products_up_sell_product_idToproducts: {
+          include: {
+            products_up_sell_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Cross-sell products
+        cross_sell_products_cross_sell_products_product_idToproducts: {
+          include: {
+            products_cross_sell_products_cross_sell_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        cross_sell_products_cross_sell_products_cross_sell_product_idToproducts: {
+          include: {
+            products_cross_sell_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Shortage alternatives
+        shortage_alternatives_shortage_alternatives_product_idToproducts: {
+          include: {
+            products_shortage_alternatives_alternative_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        shortage_alternatives_shortage_alternatives_alternative_product_idToproducts: {
+          include: {
+            products_shortage_alternatives_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
       }
     });
   }
@@ -56,8 +199,149 @@ export class ProductsService {
             categories: true
           }
         },
-        product_variations: true,
-        product_options: true,
+        product_variants: true,
+        product_variations: {
+          include: {
+            variations: true
+          }
+        },
+        product_options: {
+          include: {
+            options: {
+              include: {
+                option_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_attributes: {
+          include: {
+            attributes: {
+              include: {
+                attribute_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_tags: {
+          include: {
+            tags: {
+              include: {
+                tag_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        brands: true,
+        // Related products (alternatives)
+        related_products_related_products_product_idToproducts: {
+          include: {
+            products_related_products_related_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        related_products_related_products_related_product_idToproducts: {
+          include: {
+            products_related_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Up-sell products
+        up_sell_products_up_sell_products_product_idToproducts: {
+          include: {
+            products_up_sell_products_up_sell_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        up_sell_products_up_sell_products_up_sell_product_idToproducts: {
+          include: {
+            products_up_sell_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Cross-sell products
+        cross_sell_products_cross_sell_products_product_idToproducts: {
+          include: {
+            products_cross_sell_products_cross_sell_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        cross_sell_products_cross_sell_products_cross_sell_product_idToproducts: {
+          include: {
+            products_cross_sell_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Shortage alternatives
+        shortage_alternatives_shortage_alternatives_product_idToproducts: {
+          include: {
+            products_shortage_alternatives_alternative_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        shortage_alternatives_shortage_alternatives_alternative_product_idToproducts: {
+          include: {
+            products_shortage_alternatives_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
       }
     });
 
@@ -85,8 +369,149 @@ export class ProductsService {
             categories: true
           }
         },
-        product_variations: true,
-        product_options: true,
+        product_variants: true,
+        product_variations: {
+          include: {
+            variations: true
+          }
+        },
+        product_options: {
+          include: {
+            options: {
+              include: {
+                option_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_attributes: {
+          include: {
+            attributes: {
+              include: {
+                attribute_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_tags: {
+          include: {
+            tags: {
+              include: {
+                tag_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        brands: true,
+        // Related products (alternatives)
+        related_products_related_products_product_idToproducts: {
+          include: {
+            products_related_products_related_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        related_products_related_products_related_product_idToproducts: {
+          include: {
+            products_related_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Up-sell products
+        up_sell_products_up_sell_products_product_idToproducts: {
+          include: {
+            products_up_sell_products_up_sell_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        up_sell_products_up_sell_products_up_sell_product_idToproducts: {
+          include: {
+            products_up_sell_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Cross-sell products
+        cross_sell_products_cross_sell_products_product_idToproducts: {
+          include: {
+            products_cross_sell_products_cross_sell_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        cross_sell_products_cross_sell_products_cross_sell_product_idToproducts: {
+          include: {
+            products_cross_sell_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Shortage alternatives
+        shortage_alternatives_shortage_alternatives_product_idToproducts: {
+          include: {
+            products_shortage_alternatives_alternative_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        shortage_alternatives_shortage_alternatives_alternative_product_idToproducts: {
+          include: {
+            products_shortage_alternatives_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
       }
     });
 
@@ -127,6 +552,7 @@ export class ProductsService {
         category,
         minPrice,
         maxPrice,
+        is_shortage,
         page = 1,
         limit = 10,
         sortBy = 'created_at',
@@ -173,6 +599,11 @@ export class ProductsService {
         };
       }
 
+      // Add shortage filter
+      if (is_shortage !== undefined) {
+        whereClause.is_shortage = is_shortage;
+      }
+
       // Add price range condition
       if (minPrice !== undefined) {
         whereClause.price = {
@@ -190,7 +621,7 @@ export class ProductsService {
       // Calculate pagination
       const skip = (page - 1) * limit;
 
-      // Build include clause for translations and categories
+      // Build include clause for all product data
       const includeClause: any = {
         product_translations: {
           where: { locale: 'en' },
@@ -200,7 +631,150 @@ export class ProductsService {
           include: {
             categories: true
           }
-        }
+        },
+        product_variants: true,
+        product_variations: {
+          include: {
+            variations: true
+          }
+        },
+        product_options: {
+          include: {
+            options: {
+              include: {
+                option_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_attributes: {
+          include: {
+            attributes: {
+              include: {
+                attribute_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_tags: {
+          include: {
+            tags: {
+              include: {
+                tag_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        brands: true,
+        // Related products (alternatives)
+        related_products_related_products_product_idToproducts: {
+          include: {
+            products_related_products_related_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        related_products_related_products_related_product_idToproducts: {
+          include: {
+            products_related_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Up-sell products
+        up_sell_products_up_sell_products_product_idToproducts: {
+          include: {
+            products_up_sell_products_up_sell_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        up_sell_products_up_sell_products_up_sell_product_idToproducts: {
+          include: {
+            products_up_sell_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Cross-sell products
+        cross_sell_products_cross_sell_products_product_idToproducts: {
+          include: {
+            products_cross_sell_products_cross_sell_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        cross_sell_products_cross_sell_products_cross_sell_product_idToproducts: {
+          include: {
+            products_cross_sell_products_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        // Shortage alternatives
+        shortage_alternatives_shortage_alternatives_product_idToproducts: {
+          include: {
+            products_shortage_alternatives_alternative_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        shortage_alternatives_shortage_alternatives_alternative_product_idToproducts: {
+          include: {
+            products_shortage_alternatives_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
       };
 
       // Build orderBy clause - avoid ordering by translations if not searching by name
