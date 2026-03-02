@@ -8,13 +8,9 @@ import { ProductsModule } from './modules/products/products.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { AccessProgramModule } from './modules/access-program/access-program.module';
 import { SharedModule } from './modules/shared/shared.module';
-import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
     AuthModule,
     UserModule,
     ProductsModule,
