@@ -20,11 +20,11 @@ async function bootstrap() {
     new HTTPExceptionFilter(),
     new AllExceptionsFilter(),
   );
-  app.enableCors({
-    origin: ['http://localhost:3001'], // Next.js frontend URL
-    credentials: true,                // allows cookies to be sent
+  app.enableCors({ 
+    origin: [process.env.USER_FRONTEND_URL,' https://clingin.aestheticsloungepk.com', 'http'], // Next.js frontend URL
+    credentials: true,                
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT || 3000);
 }
 bootstrap();
