@@ -65,6 +65,11 @@ export class AuthService {
     }
 
     // Create activation record - user needs admin approval
+    // First, delete any existing activation records for this user
+    await this.prisma.activations.deleteMany({
+      where: { user_id: user.id },
+    });
+
     const activationCode = generateSixDigitCode();
     const activationRecord = await this.prisma.activations.create({
       data: {
@@ -161,14 +166,41 @@ export class AuthService {
 
   // Alternative method: Allow activation with code (for initial setup or special cases)
   async activateAccountWithCode(dto: ActivateAccountDto) {
+    // Find the activation record by code - get the most recent one if multiple exist
     const activation = await this.prisma.activations.findFirst({
-      where: { code: dto.code, completed: false },
+      where: { 
+        code: dto.code,
+        completed: false 
+      },
       include: {
         users: true
+      },
+      orderBy: {
+        created_at: 'desc'
       }
     });
 
-    if (!activation) throw new BadRequestException('Invalid or expired activation code');
+    if (!activation) {
+      // Check if the code exists but is already completed
+      const completedActivation = await this.prisma.activations.findFirst({
+        where: { code: dto.code, completed: true },
+        include: { users: true }
+      });
+
+      if (completedActivation) {
+        throw new BadRequestException('Activation code has already been used');
+      }
+      throw new BadRequestException('Invalid or expired activation code');
+    }
+
+    // Check if activation is expired (24 hours from creation)
+    const now = new Date();
+    const createdAt = new Date(activation.created_at || now);
+    const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursSinceCreation > 24) {
+      throw new BadRequestException('Activation code has expired. Please request a new one');
+    }
 
     // Update the activation as completed
     const updatedActivation = await this.prisma.activations.update({
@@ -199,6 +231,47 @@ export class AuthService {
         firstName: activation.users.first_name,
         lastName: activation.users.last_name,
       }
+    };
+  }
+
+  // Resend activation code
+  async resendActivationCode(email: string) {
+    const user = await this.prisma.users.findUnique({ where: { email } });
+    if (!user) throw new BadRequestException('User not found with this email');
+
+    // Check if user already has an activated account
+    const existingActivation = await this.prisma.activations.findFirst({
+      where: { user_id: user.id, completed: true },
+    });
+
+    if (existingActivation) {
+      throw new BadRequestException('Account is already activated. Please login');
+    }
+
+    // Delete any existing activation records
+    await this.prisma.activations.deleteMany({
+      where: { user_id: user.id },
+    });
+
+    // Generate new activation code
+    const activationCode = generateSixDigitCode();
+    const activationRecord = await this.prisma.activations.create({
+      data: {
+        user_id: user.id,
+        code: activationCode,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+
+    // Send activation code to user - non-blocking
+    this.mailService.sendActivationCode(email, activationCode).catch(error => {
+      console.error('Failed to send activation email:', error);
+    });
+
+    return {
+      message: 'Activation code resent successfully',
+      activationCode, // In development, return the code
     };
   }
 
@@ -244,6 +317,11 @@ export class AuthService {
 
     const code = generateSixDigitCode();
 
+    // Delete any existing reset codes for this user
+    await this.prisma.reminders.deleteMany({
+      where: { user_id: user.id, completed: false },
+    });
+
     // Create a reminder record for password reset
     await this.prisma.reminders.create({
       data: {
@@ -256,6 +334,50 @@ export class AuthService {
 
     await this.mailService.sendPasswordResetCode(dto.email, code);
     return { message: 'Password reset code sent successfully' };
+  }
+
+  // Verify email and code for password reset
+  async verifyResetEmail(email: string, code: string) {
+    const user = await this.prisma.users.findUnique({ where: { email } });
+    if (!user) throw new BadRequestException('Invalid email');
+
+    const reminder = await this.prisma.reminders.findFirst({
+      where: { 
+        code, 
+        user_id: user.id,
+        completed: false 
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    if (!reminder) {
+      // Check if code was already used
+      const completedReminder = await this.prisma.reminders.findFirst({
+        where: { code, user_id: user.id, completed: true }
+      });
+      
+      if (completedReminder) {
+        throw new BadRequestException('Reset code has already been used');
+      }
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    // Check if reminder is expired (1 hour from creation)
+    const now = new Date();
+    const createdAt = new Date(reminder.created_at || now);
+    const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursSinceCreation > 1) {
+      throw new BadRequestException('Reset code has expired. Please request a new one');
+    }
+
+    return { 
+      message: 'Email verified successfully',
+      email: user.email,
+      userId: user.id
+    };
   }
 
   async resetPassword(dto: ResetPasswordDto) {

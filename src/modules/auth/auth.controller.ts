@@ -14,6 +14,7 @@ import { SigninDto } from './dto/signin.dto';
 import { ActivateAccountDto } from './dto/activate-account.dto';
 import { ForgetPasswordDto } from './dto/forget-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyResetEmailDto } from './dto/verify-reset-email.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -70,10 +71,23 @@ export class AuthController {
     return this.authService.activateAccountByAdmin(userId, adminId);
   }
 
+  @Post('resend-activation-code')
+  async resendActivationCode(@Body('email') email: string) {
+    return this.authService.resendActivationCode(email);
+  }
+
   // ---------- PASSWORD ----------
   @Post('forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgetPasswordDto) {
     return this.authService.forgetPassword(forgotPasswordDto);
+  }
+
+  @Post('verify-reset-email')
+  async verifyResetEmail(@Body() verifyResetEmailDto: VerifyResetEmailDto) {
+    return this.authService.verifyResetEmail(
+      verifyResetEmailDto.email,
+      verifyResetEmailDto.code
+    );
   }
 
   @Post('reset-password')
