@@ -815,6 +815,133 @@ export class ProductsService {
     }
   }
 
+  // Get shortage products with alternatives from shortage_alternatives table
+  async getShortageProducts(searchDto: SearchProductsDto) {
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        sortBy = 'created_at',
+        sortOrder = 'desc'
+      } = searchDto;
+
+      // Calculate pagination
+      const skip = (page - 1) * limit;
+
+      // Build include clause for shortage products with alternatives
+      const includeClause: any = {
+        product_translations: {
+          where: { locale: 'en' },
+          take: 1
+        },
+        product_categories: {
+          include: {
+            categories: true
+          }
+        },
+        product_variants: true,
+        product_variations: {
+          include: {
+            variations: true
+          }
+        },
+        product_options: {
+          include: {
+            options: {
+              include: {
+                option_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_attributes: {
+          include: {
+            attributes: {
+              include: {
+                attribute_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        product_tags: {
+          include: {
+            tags: {
+              include: {
+                tag_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        brands: true,
+        // Shortage alternatives - get the alternative products
+        shortage_alternatives_shortage_alternatives_product_idToproducts: {
+          include: {
+            products_shortage_alternatives_alternative_product_idToproducts: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+      };
+
+      // Build orderBy clause
+      const orderByClause: any = {};
+      if (sortBy === 'name') {
+        orderByClause.created_at = 'desc';
+      } else if (sortBy === 'price') {
+        orderByClause.price = sortOrder;
+      } else {
+        orderByClause[sortBy] = sortOrder;
+      }
+
+      // Execute query - get products that have entries in shortage_alternatives table
+      const [products, total] = await Promise.all([
+        this.prisma.products.findMany({
+          where: {
+            is_active: true,
+            is_shortage: true,
+          },
+          include: includeClause,
+          skip,
+          take: limit,
+          orderBy: orderByClause,
+        }),
+        this.prisma.products.count({
+          where: {
+            is_active: true,
+            is_shortage: true,
+          }
+        }),
+      ]);
+
+      return {
+        data: products,
+        meta: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      console.error('Get shortage products error:', error);
+      throw error;
+    }
+  }
+
   // Cart Management Functionality
   async getCart(userId: number) {
     console.log(userId, typeof userId)

@@ -68,6 +68,12 @@ export class ProductsController {
     return this.productsService.searchProducts(searchDto);
   }
 
+  // Get shortage products with alternatives
+  @Get('shortage')
+  getShortageProducts(@Query() searchDto: SearchProductsDto) {
+    return this.productsService.getShortageProducts(searchDto);
+  }
+
   // Cart management endpoints (user must be authenticated)
   @Get('cart')
   @UseGuards(JwtAuthGuard)

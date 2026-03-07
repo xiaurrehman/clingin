@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, UnauthorizedExcepti
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -475,5 +476,35 @@ export class UserService {
       ur.roles.permissions?.includes('admin') ||
       ur.roles.permissions?.includes('superadmin')
     );
+  }
+
+  // Change password (requires current password verification)
+  async changePassword(userId: number, dto: ChangePasswordDto) {
+    // Find the user
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    // Hash and update new password
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.users.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        updated_at: new Date()
+      }
+    });
+
+    return { message: 'Password changed successfully' };
   }
 }

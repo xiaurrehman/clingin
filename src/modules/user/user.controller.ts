@@ -12,6 +12,7 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { AssignRoleDto } from './dto/assign-role.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from '../auth/auth.service';
@@ -129,5 +130,13 @@ export class UserController {
     const userId = req.user.sub;
     const isAdmin = await this.userService.isAdmin(userId);
     return { isAdmin };
+  }
+
+  // Change password (requires current password verification)
+  @Post('profile/me/change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(@Body() changePasswordDto: ChangePasswordDto, @Request() req) {
+    const userId = req.user.sub;
+    return this.userService.changePassword(userId, changePasswordDto);
   }
 }
