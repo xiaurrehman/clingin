@@ -26,7 +26,7 @@ async function bootstrap() {
   // });
 
   app.enableCors({ 
-    origin: [process.env.USER_FRONTEND_URL,' https://clingin.aestheticsloungepk.com', 'http'], // Next.js frontend URL
+    origin: ['https://clingin.aestheticsloungepk.com', 'http'], // Next.js frontend URL
     credentials: true,                
   });
 
