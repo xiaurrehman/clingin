@@ -20,13 +20,21 @@ async function bootstrap() {
     new HTTPExceptionFilter(),
     new AllExceptionsFilter(),
   );
-  // app.enableCors({ 
-  //   origin: ['http://localhost:3001'], // Next.js frontend URL
-  //   credentials: true,                
-  // });
+//   app.enableCors({
+//   origin: [
+//     'https://clingin.aestheticsloungepk.com',
+//      'https://api.aestheticsloungepk.com',
+//     'https://www.api.aestheticsloungepk.com',
+//     'http://localhost:3000',
+//     'http://localhost:3001'
+//   ],
+//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+//   allowedHeaders: 'Content-Type, Accept, Authorization',
+//   credentials: true,
+// });
 
   app.enableCors({ 
-    origin: ['https://clingin.aestheticsloungepk.com', 'http'], // Next.js frontend URL
+    origin: true, // Next.js frontend URL
     credentials: true,                
   });
 
