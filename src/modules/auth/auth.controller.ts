@@ -38,8 +38,8 @@ export class AuthController {
     // ✅ ACCESS TOKEN COOKIE
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
-      sameSite: 'lax', // 🔥 required for cross-origin
-      secure: false,    // true in production (HTTPS)
+      sameSite: 'none', // 🔥 required for cross-origin
+      secure: true,    // true in production (HTTPS)
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
@@ -47,8 +47,8 @@ export class AuthController {
     if (tokens.refresh_token) {
       res.cookie('refresh_token', tokens.refresh_token, {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: false,
+        sameSite: 'none',
+        secure: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
     }
@@ -125,8 +125,8 @@ export class AuthController {
 
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
+      sameSite: 'none',
+      secure: true,
       maxAge: 24 * 60 * 60 * 1000,
     });
 
