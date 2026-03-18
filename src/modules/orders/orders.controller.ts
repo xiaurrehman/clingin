@@ -8,8 +8,11 @@ import {
   Delete,
   UseGuards,
   Request,
-  Query
+  Query,
+  Res,
+  Header
 } from '@nestjs/common';
+import { Response } from 'express';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -106,5 +109,16 @@ export class OrdersController {
     const userId = req.user.sub;
     const isAdmin = await this.authService.isAdmin(userId);
     return this.ordersService.remove(+id, userId, isAdmin);
+  }
+
+  // Download invoice PDF
+  @Get(':id/invoice')
+  @UseGuards(JwtAuthGuard)
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="invoice.pdf"')
+  async downloadInvoice(@Param('id') id: string, @Request() req, @Res() res: Response) {
+    const userId = req.user.sub;
+    const isAdmin = await this.authService.isAdmin(userId);
+    return this.ordersService.downloadInvoice(+id, userId, isAdmin, res);
   }
 }

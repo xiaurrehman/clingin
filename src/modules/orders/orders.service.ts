@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException, UnauthorizedExcepti
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { Response } from 'express';
+import PDFDocument from 'pdfkit';
 
 @Injectable()
 export class OrdersService {
@@ -488,5 +490,144 @@ export class OrdersService {
       message: 'Order status updated successfully',
       order: updatedOrder
     };
+  }
+
+  // Download invoice PDF
+  async downloadInvoice(orderId: number, userId: number, isAdmin: boolean, res: Response) {
+    // If user is admin, allow access to any order
+    // If user is not admin, only allow access to their own orders
+    const whereClause: any = { id: orderId };
+
+    if (!isAdmin) {
+      whereClause.customer_id = userId;
+    }
+
+    const order = await this.prisma.orders.findFirst({
+      where: whereClause,
+      include: {
+        order_products: {
+          include: {
+            products: {
+              include: {
+                product_translations: {
+                  where: { locale: 'en' },
+                  take: 1
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Create PDF document
+    const doc = new PDFDocument({ margin: 50 });
+    
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice-order-${orderId}.pdf"`);
+    
+    // Pipe PDF to response
+    doc.pipe(res);
+
+    // Header - Company Info
+    doc.fontSize(20).text('HALO DIRECT', { align: 'center' });
+    doc.fontSize(10).text('UK Drug Shortages Platform', { align: 'center' });
+    doc.text('Invoice', { align: 'center' });
+    doc.moveDown(1);
+
+    // Invoice Details
+    doc.fontSize(12).text(`Invoice Number: INV-${order.id}`, { align: 'right' });
+    doc.text(`Order Number: #${order.id}`, { align: 'right' });
+    const orderDate = order.created_at ? new Date(order.created_at) : new Date();
+    doc.text(`Date: ${orderDate.toLocaleDateString('en-GB')}`, { align: 'right' });
+    doc.moveDown(2);
+
+    // Customer Information
+    doc.fontSize(14).text('Customer Information', { underline: true });
+    doc.fontSize(11);
+    doc.text(`Name: ${order.customer_first_name} ${order.customer_last_name}`);
+    doc.text(`Email: ${order.customer_email}`);
+    if (order.customer_phone) {
+      doc.text(`Phone: ${order.customer_phone}`);
+    }
+    doc.moveDown(1);
+
+    // Shipping Address
+    doc.fontSize(14).text('Shipping Address', { underline: true });
+    doc.fontSize(11);
+    doc.text(`${order.shipping_first_name} ${order.shipping_last_name}`);
+    doc.text(order.shipping_address_1);
+    if (order.shipping_address_2) {
+      doc.text(order.shipping_address_2);
+    }
+    doc.text(`${order.shipping_city}, ${order.shipping_state} ${order.shipping_zip}`);
+    doc.text(order.shipping_country);
+    doc.moveDown(2);
+
+    // Products Table Header
+    const tableTop = 300;
+    const tableLeft = 50;
+    
+    doc.fontSize(10);
+    doc.font('Helvetica-Bold');
+    doc.text('Product', tableLeft, tableTop);
+    doc.text('Unit Price', 250, tableTop);
+    doc.text('Quantity', 350, tableTop);
+    doc.text('Total', 450, tableTop);
+    
+    doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+    
+    // Products Table Rows
+    let rowPosition = tableTop + 30;
+    doc.font('Helvetica');
+    
+    order.order_products.forEach((product) => {
+      const productName = product.products?.product_translations[0]?.name || 'Unknown Product';
+      
+      doc.fontSize(10);
+      doc.text(productName, tableLeft, rowPosition, { width: 180, align: 'left' });
+      doc.text(`£${product.unit_price.toFixed(2)}`, 250, rowPosition);
+      doc.text(product.qty.toString(), 350, rowPosition);
+      doc.text(`£${product.line_total.toFixed(2)}`, 450, rowPosition);
+      
+      rowPosition += 25;
+    });
+
+    // Totals
+    const totalsTop = rowPosition + 20;
+    doc.moveTo(50, totalsTop - 10).lineTo(550, totalsTop - 10).stroke();
+    
+    doc.font('Helvetica');
+    doc.text('Subtotal:', 350, totalsTop);
+    doc.text(`£${order.sub_total.toFixed(2)}`, 450, totalsTop);
+    
+    doc.text('Shipping:', 350, totalsTop + 20);
+    doc.text(`£${order.shipping_cost.toFixed(2)}`, 450, totalsTop + 20);
+    
+    if (Number(order.discount) > 0) {
+      doc.text('Discount:', 350, totalsTop + 40);
+      doc.text(`-£${Number(order.discount).toFixed(2)}`, 450, totalsTop + 40);
+    }
+    
+    doc.font('Helvetica-Bold');
+    doc.fontSize(12);
+    doc.text('Total:', 350, totalsTop + 60);
+    doc.text(`£${order.total.toFixed(2)}`, 450, totalsTop + 60);
+    
+    doc.moveDown(3);
+
+    // Footer
+    doc.fontSize(10);
+    doc.font('Helvetica');
+    doc.text('Thank you for your business!', { align: 'center' });
+    doc.text('For any queries, please contact us at support@halodirect.com', { align: 'center' });
+    
+    // Finalize PDF
+    doc.end();
   }
 }
