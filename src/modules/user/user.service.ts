@@ -241,6 +241,7 @@ export class UserService {
     const user = await this.prisma.users.findUnique({
       where: { id: userId },
       include: {
+        user_profiles: true,
         user_roles: {
           include: {
             roles: {
@@ -293,7 +294,7 @@ export class UserService {
       }
     }
 
-    // Prepare update data
+    // Prepare update data for users table
     const updateData: any = {
       updated_at: new Date(),
     };
@@ -308,9 +309,37 @@ export class UserService {
       updateData.password = await bcrypt.hash(updateUserDto.password, 10);
     }
 
-    const updatedUser = await this.prisma.users.update({
-      where: { id: userId },
-      data: updateData
+    // Prepare user_profile data
+    const profileData: any = {};
+    if (updateUserDto.jobRole !== undefined) profileData.job_role = updateUserDto.jobRole;
+    if (updateUserDto.licenseNumber !== undefined) profileData.license_number = updateUserDto.licenseNumber;
+    if (updateUserDto.extension !== undefined) profileData.extension = updateUserDto.extension;
+    if (updateUserDto.instituteName !== undefined) profileData.institute_name = updateUserDto.instituteName;
+    if (updateUserDto.addressLine1 !== undefined) profileData.address_line_1 = updateUserDto.addressLine1;
+    if (updateUserDto.townCity !== undefined) profileData.town_city = updateUserDto.townCity;
+    if (updateUserDto.country !== undefined) profileData.country = updateUserDto.country;
+
+    // Update user and user_profile in a transaction
+    const [updatedUser] = await this.prisma.$transaction(async (tx) => {
+      // Update or create user_profile
+      if (Object.keys(profileData).length > 0) {
+        await tx.user_profiles.upsert({
+          where: { user_id: userId },
+          create: {
+            user_id: userId,
+            ...profileData
+          },
+          update: profileData
+        });
+      }
+
+      // Update user
+      const user = await tx.users.update({
+        where: { id: userId },
+        data: updateData
+      });
+
+      return [user];
     });
 
     const { password, ...userWithoutPassword } = updatedUser;
