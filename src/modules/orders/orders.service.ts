@@ -524,13 +524,22 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
+    // Get current user information
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
     // Create PDF document
     const doc = new PDFDocument({ margin: 50 });
-    
+
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="invoice-order-${orderId}.pdf"`);
-    
+
     // Pipe PDF to response
     doc.pipe(res);
 
@@ -547,13 +556,13 @@ export class OrdersService {
     doc.text(`Date: ${orderDate.toLocaleDateString('en-GB')}`, { align: 'right' });
     doc.moveDown(2);
 
-    // Customer Information
+    // Customer Information (from currently logged-in user)
     doc.fontSize(14).text('Customer Information', { underline: true });
     doc.fontSize(11);
-    doc.text(`Name: ${order.customer_first_name} ${order.customer_last_name}`);
-    doc.text(`Email: ${order.customer_email}`);
-    if (order.customer_phone) {
-      doc.text(`Phone: ${order.customer_phone}`);
+    doc.text(`Name: ${user.first_name} ${user.last_name}`);
+    doc.text(`Email: ${user.email}`);
+    if (user.phone) {
+      doc.text(`Phone: ${user.phone}`);
     }
     doc.moveDown(1);
 
