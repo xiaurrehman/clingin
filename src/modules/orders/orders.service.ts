@@ -567,10 +567,10 @@ export class OrdersService {
     }
     doc.text(`${order.shipping_city}, ${order.shipping_state} ${order.shipping_zip}`);
     doc.text(order.shipping_country);
-    doc.moveDown(2);
+    doc.moveDown(3);
 
     // Products Table Header
-    const tableTop = 300;
+    const tableTop = doc.y + 20;
     const tableLeft = 50;
     
     doc.fontSize(10);
