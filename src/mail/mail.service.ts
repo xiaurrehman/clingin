@@ -55,6 +55,39 @@ export class MailService {
     await this.sendMail(email, subject, html);
   }
 
+  async sendAdminOrderNotification(
+    adminEmail: string,
+    orderDetails: {
+      id: number;
+      customerFirstName: string;
+      customerLastName: string;
+      customerEmail: string;
+      total: string;
+      currency: string;
+      status: string;
+      createdAt: Date;
+      itemCount: number;
+    }
+  ): Promise<void> {
+    const subject = `New Order Placed - Order #${orderDetails.id}`;
+    const html = `
+      <h2>New Order Notification</h2>
+      <p>A new order has been placed on your store.</p>
+
+      <h3>Order Details:</h3>
+      <p><strong>Order ID:</strong> #${orderDetails.id}</p>
+      <p><strong>Customer:</strong> ${orderDetails.customerFirstName} ${orderDetails.customerLastName}</p>
+      <p><strong>Customer Email:</strong> ${orderDetails.customerEmail}</p>
+      <p><strong>Order Date:</strong> ${orderDetails.createdAt.toISOString()}</p>
+      <p><strong>Status:</strong> ${orderDetails.status}</p>
+      <p><strong>Total Amount:</strong> ${orderDetails.currency} ${Number(orderDetails.total).toFixed(2)}</p>
+      <p><strong>Items Count:</strong> ${orderDetails.itemCount}</p>
+
+      <p>Please process this order as soon as possible.</p>
+    `;
+    await this.sendMail(adminEmail, subject, html);
+  }
+
   private getActivationLink(code: string): string {
     // Adjust frontend URL as needed
     return `${process.env.FRONTEND_URL || 'http://localhost:3001'}/activate?code=${code} `;

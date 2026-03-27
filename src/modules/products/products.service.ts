@@ -1639,6 +1639,37 @@ export class ProductsService {
           'Order Confirmation - Order #' + orderDetails.id,
           orderHtml
         );
+
+        // Send admin order notification
+        try {
+          const adminSetting = await this.prisma.settings.findUnique({
+            where: { key: 'store_email' }
+          });
+
+          if (adminSetting && adminSetting.plain_value) {
+            // Handle PHP serialized string format (e.g., s:21:"email @example.com";)
+            let adminEmail = adminSetting.plain_value;
+            const phpSerializedMatch = adminSetting.plain_value.match(/s:\d+:"([^"]+)"/);
+            if (phpSerializedMatch) {
+              adminEmail = phpSerializedMatch[1];
+            }
+
+            await this.mailService.sendAdminOrderNotification(adminEmail, {
+              id: orderDetails.id,
+              customerFirstName: orderDetails.customer_first_name,
+              customerLastName: orderDetails.customer_last_name,
+              customerEmail: orderDetails.customer_email,
+              total: orderDetails.total.toString(),
+              currency: orderDetails.currency,
+              status: orderDetails.status,
+              createdAt: orderDetails.created_at || new Date(),
+              itemCount: orderDetails.order_products.length
+            });
+          }
+        } catch (adminEmailError) {
+          console.error('Failed to send admin order notification:', adminEmailError);
+          // Don't throw error as the order was still placed successfully and customer email was sent
+        }
       }
     } catch (emailError) {
       console.error('Failed to send order confirmation email:', emailError);
