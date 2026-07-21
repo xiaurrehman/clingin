@@ -9,10 +9,10 @@
     "node": "20.x"
   },
   "scripts": {
-    "build": "nest build",
+    "build": "node node_modules/@nestjs/cli/bin/nest.js build",
     "start": "node dist/main.js",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
+    "start:dev": "node node_modules/@nestjs/cli/bin/nest.js start --watch",
+    "start:debug": "node node_modules/@nestjs/cli/bin/nest.js start --debug --watch",
     "start:prod": "node dist/main.js",
     "postinstall": "prisma generate",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
