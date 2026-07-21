@@ -1,14 +1,18 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
+const PRISMA_POOL_LIMIT = 3;
+
 function databaseUrlWithPoolLimit(): string | undefined {
   const url = process.env.DATABASE_URL;
   if (!url) return undefined;
-  // Hostinger shared hosting: keep Prisma pool small to avoid thread/process limits
-  if (/[?&]connection_limit=/.test(url)) return url;
-  return url.includes('?')
-    ? `${url}&connection_limit=5`
-    : `${url}?connection_limit=5`;
+  // Always force a small pool (Hostinger shared hosting)
+  const withoutLimit = url
+    .replace(/([?&])connection_limit=\d+/g, '$1')
+    .replace(/[?&]$/, '')
+    .replace(/\?&/, '?');
+  const sep = withoutLimit.includes('?') ? '&' : '?';
+  return `${withoutLimit}${sep}connection_limit=${PRISMA_POOL_LIMIT}`;
 }
 
 @Injectable()
