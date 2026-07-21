@@ -1748,6 +1748,73 @@ CREATE TABLE `up_sell_products` (
 
 -- --------------------------------------------------------
 
+
+-- --------------------------------------------------------
+-- Table structure for table `account_openings`
+-- (HALO customer account opening applications — added for signup form)
+-- --------------------------------------------------------
+
+CREATE TABLE `account_openings` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` int UNSIGNED NOT NULL,
+  `customer_type` varchar(32) NOT NULL,
+  `company_name` varchar(191) NOT NULL,
+  `trading_name` varchar(191) DEFAULT NULL,
+  `registered_address` text NOT NULL,
+  `warehouse_address` text DEFAULT NULL,
+  `telephone` varchar(191) DEFAULT NULL,
+  `website` varchar(191) DEFAULT NULL,
+  `company_house_no` varchar(191) DEFAULT NULL,
+  `vat_no` varchar(191) DEFAULT NULL,
+  `wda_no` varchar(191) DEFAULT NULL,
+  `gdp_cert_no` varchar(191) DEFAULT NULL,
+  `gdp_answers` json DEFAULT NULL,
+  `license_reg_no` varchar(191) DEFAULT NULL,
+  `cqc_reg_no` varchar(191) DEFAULT NULL,
+  `cqc_address` text DEFAULT NULL,
+  `personnel` json DEFAULT NULL,
+  `bank_name` varchar(191) DEFAULT NULL,
+  `sort_code` varchar(191) DEFAULT NULL,
+  `bank_address` varchar(191) DEFAULT NULL,
+  `account_no` varchar(191) DEFAULT NULL,
+  `confirm_accurate` tinyint(1) NOT NULL DEFAULT 0,
+  `confirm_consent` tinyint(1) NOT NULL DEFAULT 0,
+  `decl_name` varchar(191) DEFAULT NULL,
+  `decl_position` varchar(191) DEFAULT NULL,
+  `decl_sign` varchar(191) DEFAULT NULL,
+  `decl_date` date DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `account_openings_user_id_key` (`user_id`),
+  KEY `account_openings_user_id_index` (`user_id`),
+  KEY `account_openings_customer_type_index` (`customer_type`),
+  CONSTRAINT `account_openings_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- --------------------------------------------------------
+-- Table structure for table `user_profiles`
+-- --------------------------------------------------------
+
+CREATE TABLE `user_profiles` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` int UNSIGNED NOT NULL,
+  `job_role` varchar(191) DEFAULT NULL,
+  `license_number` varchar(191) DEFAULT NULL,
+  `extension` varchar(191) DEFAULT NULL,
+  `institute_name` varchar(191) DEFAULT NULL,
+  `address_line_1` varchar(191) DEFAULT NULL,
+  `town_city` varchar(191) DEFAULT NULL,
+  `country` varchar(191) DEFAULT 'United Kingdom',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_profiles_user_id_key` (`user_id`),
+  KEY `user_profiles_user_id_index` (`user_id`),
+  CONSTRAINT `user_profiles_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 --
 -- Table structure for table `users`
 --

@@ -1,12 +1,12 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["fullTextIndex"]
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL") 
+  url      = env("DATABASE_URL")
 }
 
 model activations {
@@ -17,7 +17,7 @@ model activations {
   completed_at DateTime? @db.DateTime(0)
   created_at   DateTime? @db.Timestamp(0)
   updated_at   DateTime? @db.Timestamp(0)
-  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "activations_user_id_foreign")
+  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "activations_user_id_foreign")
 
   @@index([user_id], map: "activations_user_id_index")
 }
@@ -35,7 +35,7 @@ model addresses {
   country           String
   created_at        DateTime?           @db.Timestamp(0)
   updated_at        DateTime?           @db.Timestamp(0)
-  users             users               @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "addresses_customer_id_foreign")
+  users             users               @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "addresses_customer_id_foreign")
   default_addresses default_addresses[]
 
   @@index([customer_id], map: "addresses_customer_id_foreign")
@@ -44,8 +44,8 @@ model addresses {
 model attribute_categories {
   attribute_id Int        @db.UnsignedInt
   category_id  Int        @db.UnsignedInt
-  attributes   attributes @relation(fields: [attribute_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "attribute_categories_attribute_id_foreign")
-  categories   categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "attribute_categories_category_id_foreign")
+  attributes   attributes @relation(fields: [attribute_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attribute_categories_attribute_id_foreign")
+  categories   categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attribute_categories_category_id_foreign")
 
   @@id([attribute_id, category_id])
   @@index([category_id], map: "attribute_categories_category_id_foreign")
@@ -56,7 +56,7 @@ model attribute_set_translations {
   attribute_set_id Int            @db.UnsignedInt
   locale           String
   name             String
-  attribute_sets   attribute_sets @relation(fields: [attribute_set_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "attribute_set_translations_attribute_set_id_foreign")
+  attribute_sets   attribute_sets @relation(fields: [attribute_set_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attribute_set_translations_attribute_set_id_foreign")
 
   @@unique([attribute_set_id, locale], map: "attribute_set_translations_attribute_set_id_locale_unique")
 }
@@ -74,7 +74,7 @@ model attribute_translations {
   attribute_id Int        @db.UnsignedInt
   locale       String
   name         String
-  attributes   attributes @relation(fields: [attribute_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "attribute_translations_attribute_id_foreign")
+  attributes   attributes @relation(fields: [attribute_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attribute_translations_attribute_id_foreign")
 
   @@unique([attribute_id, locale], map: "attribute_translations_attribute_id_locale_unique")
 }
@@ -84,7 +84,7 @@ model attribute_value_translations {
   attribute_value_id Int              @db.UnsignedInt
   locale             String
   value              String
-  attribute_values   attribute_values @relation(fields: [attribute_value_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "attribute_value_translations_attribute_value_id_foreign")
+  attribute_values   attribute_values @relation(fields: [attribute_value_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attribute_value_translations_attribute_value_id_foreign")
 
   @@unique([attribute_value_id, locale], map: "attribute_value_translations_attribute_value_id_locale_unique")
 }
@@ -96,7 +96,7 @@ model attribute_values {
   created_at                   DateTime?                      @db.Timestamp(0)
   updated_at                   DateTime?                      @db.Timestamp(0)
   attribute_value_translations attribute_value_translations[]
-  attributes                   attributes                     @relation(fields: [attribute_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "attribute_values_attribute_id_foreign")
+  attributes                   attributes                     @relation(fields: [attribute_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attribute_values_attribute_id_foreign")
   product_attribute_values     product_attribute_values[]
 
   @@index([attribute_id], map: "attribute_values_attribute_id_index")
@@ -112,7 +112,7 @@ model attributes {
   attribute_categories   attribute_categories[]
   attribute_translations attribute_translations[]
   attribute_values       attribute_values[]
-  attribute_sets         attribute_sets           @relation(fields: [attribute_set_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "attributes_attribute_set_id_foreign")
+  attribute_sets         attribute_sets           @relation(fields: [attribute_set_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attributes_attribute_set_id_foreign")
   product_attributes     product_attributes[]
 
   @@index([attribute_set_id], map: "attributes_attribute_set_id_index")
@@ -132,7 +132,7 @@ model blog_category_translations {
   blog_category_id BigInt          @db.UnsignedBigInt
   locale           String
   name             String
-  blog_categories  blog_categories @relation(fields: [blog_category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "blog_category_translations_blog_category_id_foreign")
+  blog_categories  blog_categories @relation(fields: [blog_category_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "blog_category_translations_blog_category_id_foreign")
 
   @@unique([blog_category_id, locale], map: "blog_category_translations_blog_category_id_locale_unique")
 }
@@ -140,8 +140,8 @@ model blog_category_translations {
 model blog_post_blog_tag {
   blog_post_id BigInt     @db.UnsignedBigInt
   blog_tag_id  BigInt     @db.UnsignedBigInt
-  blog_posts   blog_posts @relation(fields: [blog_post_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "blog_post_blog_tag_blog_post_id_foreign")
-  blog_tags    blog_tags  @relation(fields: [blog_tag_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "blog_post_blog_tag_blog_tag_id_foreign")
+  blog_posts   blog_posts @relation(fields: [blog_post_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "blog_post_blog_tag_blog_post_id_foreign")
+  blog_tags    blog_tags  @relation(fields: [blog_tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "blog_post_blog_tag_blog_tag_id_foreign")
 
   @@id([blog_post_id, blog_tag_id])
   @@index([blog_tag_id], map: "blog_post_blog_tag_blog_tag_id_foreign")
@@ -153,7 +153,7 @@ model blog_post_translations {
   locale       String
   title        String
   description  String     @db.LongText
-  blog_posts   blog_posts @relation(fields: [blog_post_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "blog_post_translations_blog_post_id_foreign")
+  blog_posts   blog_posts @relation(fields: [blog_post_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "blog_post_translations_blog_post_id_foreign")
 
   @@unique([blog_post_id, locale], map: "blog_post_translations_blog_post_id_locale_unique")
   @@fulltext([title], map: "title")
@@ -169,8 +169,8 @@ model blog_posts {
   updated_at             DateTime?                @db.Timestamp(0)
   blog_post_blog_tag     blog_post_blog_tag[]
   blog_post_translations blog_post_translations[]
-  blog_categories        blog_categories?         @relation(fields: [blog_category_id], references: [id], onUpdate: Restrict, map: "blog_posts_blog_category_id_foreign")
-  users                  users                    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "blog_posts_user_id_foreign")
+  blog_categories        blog_categories?         @relation(fields: [blog_category_id], references: [id], onUpdate: NoAction, map: "blog_posts_blog_category_id_foreign")
+  users                  users                    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "blog_posts_user_id_foreign")
 
   @@index([blog_category_id], map: "blog_posts_blog_category_id_foreign")
   @@index([user_id], map: "blog_posts_user_id_foreign")
@@ -181,7 +181,7 @@ model blog_tag_translations {
   blog_tag_id BigInt    @db.UnsignedBigInt
   locale      String
   name        String
-  blog_tags   blog_tags @relation(fields: [blog_tag_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "blog_tag_translations_blog_tag_id_foreign")
+  blog_tags   blog_tags @relation(fields: [blog_tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "blog_tag_translations_blog_tag_id_foreign")
 
   @@unique([blog_tag_id, locale], map: "blog_tag_translations_blog_tag_id_locale_unique")
 }
@@ -232,7 +232,7 @@ model categories {
   created_at            DateTime?               @db.Timestamp(0)
   updated_at            DateTime?               @db.Timestamp(0)
   attribute_categories  attribute_categories[]
-  categories            categories?             @relation("categoriesTocategories", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "categories_parent_id_foreign")
+  categories            categories?             @relation("categoriesTocategories", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "categories_parent_id_foreign")
   other_categories      categories[]            @relation("categoriesTocategories")
   category_translations category_translations[]
   coupon_categories     coupon_categories[]
@@ -247,7 +247,7 @@ model category_translations {
   category_id Int        @db.UnsignedInt
   locale      String
   name        String
-  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "category_translations_category_id_foreign")
+  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "category_translations_category_id_foreign")
 
   @@unique([category_id, locale], map: "category_translations_category_id_locale_unique")
 }
@@ -256,8 +256,8 @@ model coupon_categories {
   coupon_id   Int        @db.UnsignedInt
   category_id Int        @db.UnsignedInt
   exclude     Boolean    @default(false)
-  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "coupon_categories_category_id_foreign")
-  coupons     coupons    @relation(fields: [coupon_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "coupon_categories_coupon_id_foreign")
+  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "coupon_categories_category_id_foreign")
+  coupons     coupons    @relation(fields: [coupon_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "coupon_categories_coupon_id_foreign")
 
   @@id([coupon_id, category_id, exclude])
   @@index([category_id], map: "coupon_categories_category_id_foreign")
@@ -267,8 +267,8 @@ model coupon_products {
   coupon_id  Int      @db.UnsignedInt
   product_id Int      @db.UnsignedInt
   exclude    Boolean  @default(false)
-  coupons    coupons  @relation(fields: [coupon_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "coupon_products_coupon_id_foreign")
-  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "coupon_products_product_id_foreign")
+  coupons    coupons  @relation(fields: [coupon_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "coupon_products_coupon_id_foreign")
+  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "coupon_products_product_id_foreign")
 
   @@id([coupon_id, product_id])
   @@index([product_id], map: "coupon_products_product_id_foreign")
@@ -279,7 +279,7 @@ model coupon_translations {
   coupon_id Int     @db.UnsignedInt
   locale    String
   name      String
-  coupons   coupons @relation(fields: [coupon_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "coupon_translations_coupon_id_foreign")
+  coupons   coupons @relation(fields: [coupon_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "coupon_translations_coupon_id_foreign")
 
   @@unique([coupon_id, locale], map: "coupon_translations_coupon_id_locale_unique")
 }
@@ -313,8 +313,8 @@ model cross_sell_products {
   cross_sell_product_id                                        Int       @db.UnsignedInt
   created_at                                                   DateTime? @db.Timestamp(0)
   updated_at                                                   DateTime? @db.Timestamp(0)
-  products_cross_sell_products_cross_sell_product_idToproducts products  @relation("cross_sell_products_cross_sell_product_idToproducts", fields: [cross_sell_product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "cross_sell_products_cross_sell_product_id_foreign")
-  products_cross_sell_products_product_idToproducts            products  @relation("cross_sell_products_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "cross_sell_products_product_id_foreign")
+  products_cross_sell_products_cross_sell_product_idToproducts products  @relation("cross_sell_products_cross_sell_product_idToproducts", fields: [cross_sell_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cross_sell_products_cross_sell_product_id_foreign")
+  products_cross_sell_products_product_idToproducts            products  @relation("cross_sell_products_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cross_sell_products_product_id_foreign")
 
   @@id([product_id, cross_sell_product_id])
   @@index([cross_sell_product_id], map: "cross_sell_products_cross_sell_product_id_foreign")
@@ -332,8 +332,8 @@ model default_addresses {
   id          Int       @id @default(autoincrement()) @db.UnsignedInt
   customer_id Int       @db.UnsignedInt
   address_id  Int       @db.UnsignedInt
-  addresses   addresses @relation(fields: [address_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "default_addresses_address_id_foreign")
-  users       users     @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "default_addresses_customer_id_foreign")
+  addresses   addresses @relation(fields: [address_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "default_addresses_address_id_foreign")
+  users       users     @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "default_addresses_customer_id_foreign")
 
   @@index([address_id], map: "default_addresses_address_id_foreign")
   @@index([customer_id], map: "default_addresses_customer_id_foreign")
@@ -347,7 +347,7 @@ model entity_files {
   zone        String
   created_at  DateTime? @db.Timestamp(0)
   updated_at  DateTime? @db.Timestamp(0)
-  files       files     @relation(fields: [file_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "entity_files_file_id_foreign")
+  files       files     @relation(fields: [file_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_files_file_id_foreign")
 
   @@index([entity_type, entity_id], map: "entity_files_entity_type_entity_id_index")
   @@index([file_id], map: "entity_files_file_id_index")
@@ -376,8 +376,8 @@ model flash_sale_product_orders {
   flash_sale_product_id Int                 @db.UnsignedInt
   order_id              Int                 @db.UnsignedInt
   qty                   Int
-  flash_sale_products   flash_sale_products @relation(fields: [flash_sale_product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "flash_sale_product_orders_flash_sale_product_id_foreign")
-  orders                orders              @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "flash_sale_product_orders_order_id_foreign")
+  flash_sale_products   flash_sale_products @relation(fields: [flash_sale_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "flash_sale_product_orders_flash_sale_product_id_foreign")
+  orders                orders              @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "flash_sale_product_orders_order_id_foreign")
 
   @@id([flash_sale_product_id, order_id])
   @@index([order_id], map: "flash_sale_product_orders_order_id_foreign")
@@ -392,8 +392,8 @@ model flash_sale_products {
   qty                       Int
   position                  Int
   flash_sale_product_orders flash_sale_product_orders[]
-  flash_sales               flash_sales                 @relation(fields: [flash_sale_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "flash_sale_products_flash_sale_id_foreign")
-  products                  products                    @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "flash_sale_products_product_id_foreign")
+  flash_sales               flash_sales                 @relation(fields: [flash_sale_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "flash_sale_products_flash_sale_id_foreign")
+  products                  products                    @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "flash_sale_products_product_id_foreign")
 
   @@index([flash_sale_id], map: "flash_sale_products_flash_sale_id_foreign")
   @@index([product_id], map: "flash_sale_products_product_id_foreign")
@@ -404,7 +404,7 @@ model flash_sale_translations {
   flash_sale_id Int         @db.UnsignedInt
   locale        String
   campaign_name String
-  flash_sales   flash_sales @relation(fields: [flash_sale_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "flash_sale_translations_flash_sale_id_foreign")
+  flash_sales   flash_sales @relation(fields: [flash_sale_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "flash_sale_translations_flash_sale_id_foreign")
 
   @@unique([flash_sale_id, locale], map: "flash_sale_translations_flash_sale_id_locale_unique")
 }
@@ -422,7 +422,7 @@ model menu_item_translations {
   menu_item_id Int        @db.UnsignedInt
   locale       String
   name         String
-  menu_items   menu_items @relation(fields: [menu_item_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menu_item_translations_menu_item_id_foreign")
+  menu_items   menu_items @relation(fields: [menu_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "menu_item_translations_menu_item_id_foreign")
 
   @@unique([menu_item_id, locale], map: "menu_item_translations_menu_item_id_locale_unique")
 }
@@ -444,10 +444,10 @@ model menu_items {
   created_at             DateTime?                @db.Timestamp(0)
   updated_at             DateTime?                @db.Timestamp(0)
   menu_item_translations menu_item_translations[]
-  categories             categories?              @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menu_items_category_id_foreign")
-  menus                  menus                    @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menu_items_menu_id_foreign")
-  pages                  pages?                   @relation(fields: [page_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menu_items_page_id_foreign")
-  menu_items             menu_items?              @relation("menu_itemsTomenu_items", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menu_items_parent_id_foreign")
+  categories             categories?              @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "menu_items_category_id_foreign")
+  menus                  menus                    @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "menu_items_menu_id_foreign")
+  pages                  pages?                   @relation(fields: [page_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "menu_items_page_id_foreign")
+  menu_items             menu_items?              @relation("menu_itemsTomenu_items", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "menu_items_parent_id_foreign")
   other_menu_items       menu_items[]             @relation("menu_itemsTomenu_items")
 
   @@index([category_id], map: "menu_items_category_id_foreign")
@@ -461,7 +461,7 @@ model menu_translations {
   menu_id Int    @db.UnsignedInt
   locale  String
   name    String
-  menus   menus  @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menu_translations_menu_id_foreign")
+  menus   menus  @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "menu_translations_menu_id_foreign")
 
   @@unique([menu_id, locale], map: "menu_translations_menu_id_locale_unique")
 }
@@ -492,7 +492,7 @@ model meta_data_translations {
   locale           String
   meta_title       String?
   meta_description String?   @db.Text
-  meta_data        meta_data @relation(fields: [meta_data_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "meta_data_translations_meta_data_id_foreign")
+  meta_data        meta_data @relation(fields: [meta_data_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "meta_data_translations_meta_data_id_foreign")
 
   @@unique([meta_data_id, locale], map: "meta_data_translations_meta_data_id_locale_unique")
 }
@@ -508,7 +508,7 @@ model option_translations {
   option_id Int     @db.UnsignedInt
   locale    String
   name      String
-  options   options @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "option_translations_option_id_foreign")
+  options   options @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "option_translations_option_id_foreign")
 
   @@unique([option_id, locale], map: "option_translations_option_id_locale_unique")
 }
@@ -518,7 +518,7 @@ model option_value_translations {
   option_value_id Int           @db.UnsignedInt
   locale          String
   label           String
-  option_values   option_values @relation(fields: [option_value_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "option_value_translations_option_value_id_foreign")
+  option_values   option_values @relation(fields: [option_value_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "option_value_translations_option_value_id_foreign")
 
   @@unique([option_value_id, locale], map: "option_value_translations_option_value_id_locale_unique")
 }
@@ -532,7 +532,7 @@ model option_values {
   created_at                  DateTime?                     @db.Timestamp(0)
   updated_at                  DateTime?                     @db.Timestamp(0)
   option_value_translations   option_value_translations[]
-  options                     options                       @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "option_values_option_id_foreign")
+  options                     options                       @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "option_values_option_id_foreign")
   order_product_option_values order_product_option_values[]
 
   @@index([option_id], map: "option_values_option_id_index")
@@ -557,8 +557,8 @@ model order_downloads {
   id       Int    @id @default(autoincrement()) @db.UnsignedInt
   order_id Int    @db.UnsignedInt
   file_id  Int    @db.UnsignedInt
-  files    files  @relation(fields: [file_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_downloads_file_id_foreign")
-  orders   orders @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_downloads_order_id_foreign")
+  files    files  @relation(fields: [file_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_downloads_file_id_foreign")
+  orders   orders @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_downloads_order_id_foreign")
 
   @@index([file_id], map: "order_downloads_file_id_foreign")
   @@index([order_id], map: "order_downloads_order_id_foreign")
@@ -568,8 +568,8 @@ model order_product_option_values {
   order_product_option_id Int                   @db.UnsignedInt
   option_value_id         Int                   @db.UnsignedInt
   price                   Decimal?              @db.Decimal(18, 4)
-  option_values           option_values         @relation(fields: [option_value_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_product_option_values_option_value_id_foreign")
-  order_product_options   order_product_options @relation(fields: [order_product_option_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_product_option_values_order_product_option_id_foreign")
+  option_values           option_values         @relation(fields: [option_value_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_product_option_values_option_value_id_foreign")
+  order_product_options   order_product_options @relation(fields: [order_product_option_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_product_option_values_order_product_option_id_foreign")
 
   @@id([order_product_option_id, option_value_id])
   @@index([option_value_id], map: "order_product_option_values_option_value_id_foreign")
@@ -581,8 +581,8 @@ model order_product_options {
   option_id                   Int                           @db.UnsignedInt
   value                       String?                       @db.Text
   order_product_option_values order_product_option_values[]
-  options                     options                       @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_product_options_option_id_foreign")
-  order_products              order_products                @relation(fields: [order_product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_product_options_order_product_id_foreign")
+  options                     options                       @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_product_options_option_id_foreign")
+  order_products              order_products                @relation(fields: [order_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_product_options_order_product_id_foreign")
 
   @@unique([order_product_id, option_id], map: "order_product_options_order_product_id_option_id_unique")
   @@index([option_id], map: "order_product_options_option_id_foreign")
@@ -591,8 +591,8 @@ model order_product_options {
 model order_product_variation_values {
   order_product_variation_id Int                      @db.UnsignedInt
   variation_value_id         Int                      @db.UnsignedInt
-  order_product_variations   order_product_variations @relation(fields: [order_product_variation_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_product_variation_values_order_product_variation_id")
-  variation_values           variation_values         @relation(fields: [variation_value_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_product_variation_values_variation_value_id_foreign")
+  order_product_variations   order_product_variations @relation(fields: [order_product_variation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_product_variation_values_order_product_variation_id")
+  variation_values           variation_values         @relation(fields: [variation_value_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_product_variation_values_variation_value_id_foreign")
 
   @@id([order_product_variation_id, variation_value_id])
   @@index([variation_value_id], map: "order_product_variation_values_variation_value_id_foreign")
@@ -605,8 +605,8 @@ model order_product_variations {
   type                           String
   value                          String
   order_product_variation_values order_product_variation_values[]
-  order_products                 order_products                   @relation(fields: [order_product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_product_variations_order_product_id_foreign")
-  variations                     variations                       @relation(fields: [variation_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_product_variations_variation_id_foreign")
+  order_products                 order_products                   @relation(fields: [order_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_product_variations_order_product_id_foreign")
+  variations                     variations                       @relation(fields: [variation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_product_variations_variation_id_foreign")
 
   @@unique([order_product_id, variation_id], map: "order_product_variations_order_product_id_variation_id_unique")
   @@index([variation_id], map: "order_product_variations_variation_id_foreign")
@@ -622,8 +622,8 @@ model order_products {
   line_total               Decimal                    @db.Decimal(18, 4)
   order_product_options    order_product_options[]
   order_product_variations order_product_variations[]
-  orders                   orders                     @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_products_order_id_foreign")
-  products                 products                   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_products_product_id_foreign")
+  orders                   orders                     @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_products_order_id_foreign")
+  products                 products                   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_products_product_id_foreign")
 
   @@index([order_id], map: "order_products_order_id_foreign")
   @@index([product_id], map: "order_products_product_id_foreign")
@@ -633,8 +633,8 @@ model order_taxes {
   order_id    Int       @db.UnsignedInt
   tax_rate_id Int       @db.UnsignedInt
   amount      Decimal   @db.Decimal(15, 4)
-  orders      orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_taxes_order_id_foreign")
-  tax_rates   tax_rates @relation(fields: [tax_rate_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_taxes_tax_rate_id_foreign")
+  orders      orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_taxes_order_id_foreign")
+  tax_rates   tax_rates @relation(fields: [tax_rate_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "order_taxes_tax_rate_id_foreign")
 
   @@id([order_id, tax_rate_id])
   @@index([tax_rate_id], map: "order_taxes_tax_rate_id_foreign")
@@ -695,7 +695,7 @@ model page_translations {
   locale  String
   name    String
   body    String @db.LongText
-  pages   pages  @relation(fields: [page_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "page_translations_page_id_foreign")
+  pages   pages  @relation(fields: [page_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "page_translations_page_id_foreign")
 
   @@unique([page_id, locale], map: "page_translations_page_id_locale_unique")
 }
@@ -716,7 +716,7 @@ model persistences {
   code       String    @unique(map: "persistences_code_unique")
   created_at DateTime? @db.Timestamp(0)
   updated_at DateTime? @db.Timestamp(0)
-  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "persistences_user_id_foreign")
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "persistences_user_id_foreign")
 
   @@index([user_id], map: "persistences_user_id_foreign")
 }
@@ -724,8 +724,8 @@ model persistences {
 model product_attribute_values {
   product_attribute_id Int                @db.UnsignedInt
   attribute_value_id   Int                @db.UnsignedInt
-  attribute_values     attribute_values   @relation(fields: [attribute_value_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_attribute_values_attribute_value_id_foreign")
-  product_attributes   product_attributes @relation(fields: [product_attribute_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_attribute_values_product_attribute_id_foreign")
+  attribute_values     attribute_values   @relation(fields: [attribute_value_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_attribute_values_attribute_value_id_foreign")
+  product_attributes   product_attributes @relation(fields: [product_attribute_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_attribute_values_product_attribute_id_foreign")
 
   @@id([product_attribute_id, attribute_value_id])
   @@index([attribute_value_id], map: "product_attribute_values_attribute_value_id_foreign")
@@ -736,8 +736,8 @@ model product_attributes {
   product_id               Int                        @db.UnsignedInt
   attribute_id             Int                        @db.UnsignedInt
   product_attribute_values product_attribute_values[]
-  attributes               attributes                 @relation(fields: [attribute_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_attributes_attribute_id_foreign")
-  products                 products                   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_attributes_product_id_foreign")
+  attributes               attributes                 @relation(fields: [attribute_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_attributes_attribute_id_foreign")
+  products                 products                   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_attributes_product_id_foreign")
 
   @@index([attribute_id], map: "product_attributes_attribute_id_index")
   @@index([product_id], map: "product_attributes_product_id_index")
@@ -746,8 +746,8 @@ model product_attributes {
 model product_categories {
   product_id  Int        @db.UnsignedInt
   category_id Int        @db.UnsignedInt
-  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_categories_category_id_foreign")
-  products    products   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_categories_product_id_foreign")
+  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_categories_category_id_foreign")
+  products    products   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_categories_product_id_foreign")
 
   @@id([product_id, category_id])
   @@index([category_id], map: "product_categories_category_id_foreign")
@@ -756,8 +756,8 @@ model product_categories {
 model product_options {
   product_id Int      @db.UnsignedInt
   option_id  Int      @db.UnsignedInt
-  options    options  @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_options_option_id_foreign")
-  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_options_product_id_foreign")
+  options    options  @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_options_option_id_foreign")
+  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_options_product_id_foreign")
 
   @@id([product_id, option_id])
   @@index([option_id], map: "product_options_option_id_foreign")
@@ -766,8 +766,8 @@ model product_options {
 model product_tags {
   product_id Int      @db.UnsignedInt
   tag_id     Int      @db.UnsignedInt
-  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_tags_product_id_foreign")
-  tags       tags     @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_tags_tag_id_foreign")
+  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_tags_product_id_foreign")
+  tags       tags     @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_tags_tag_id_foreign")
 
   @@id([product_id, tag_id])
   @@index([tag_id], map: "product_tags_tag_id_foreign")
@@ -780,7 +780,7 @@ model product_translations {
   name              String
   description       String   @db.LongText
   short_description String?  @db.Text
-  products          products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_translations_product_id_foreign")
+  products          products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_translations_product_id_foreign")
 
   @@unique([product_id, locale], map: "product_translations_product_id_locale_unique")
   @@fulltext([name], map: "name")
@@ -808,7 +808,7 @@ model product_variants {
   deleted_at          DateTime? @db.Timestamp(0)
   created_at          DateTime? @db.Timestamp(0)
   updated_at          DateTime? @db.Timestamp(0)
-  products            products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_variants_product_id_foreign")
+  products            products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_variants_product_id_foreign")
 
   @@index([product_id], map: "product_variants_product_id_foreign")
 }
@@ -816,8 +816,8 @@ model product_variants {
 model product_variations {
   product_id   Int        @db.UnsignedInt
   variation_id Int        @db.UnsignedInt
-  products     products   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_variations_product_id_foreign")
-  variations   variations @relation(fields: [variation_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "product_variations_variation_id_foreign")
+  products     products   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_variations_product_id_foreign")
+  variations   variations @relation(fields: [variation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_variations_variation_id_foreign")
 
   @@id([product_id, variation_id])
   @@index([variation_id], map: "product_variations_variation_id_foreign")
@@ -826,31 +826,45 @@ model product_variations {
 model products {
   id                                                                           Int                     @id @default(autoincrement()) @db.UnsignedInt
   brand_id                                                                     Int?                    @db.UnsignedInt
+  brand_name                                                                   String?
   tax_class_id                                                                 Int?                    @db.UnsignedInt
   slug                                                                         String                  @unique(map: "products_slug_unique")
   price                                                                        Decimal?                @db.Decimal(18, 4)
+  pack_price                                                                   Decimal?                @db.Decimal(18, 4)
   special_price                                                                Decimal?                @db.Decimal(18, 4)
   special_price_type                                                           String?
   special_price_start                                                          DateTime?               @db.Date
   special_price_end                                                            DateTime?               @db.Date
   selling_price                                                                Decimal?                @db.Decimal(18, 4)
+  total                                                                        Decimal?                @db.Decimal(18, 4)
   sku                                                                          String?
   dosage_form_pack_size                                                        String?
+  strength                                                                     String?
+  pack_size                                                                    String?
   product_code                                                                 String?
+  product_code_value                                                           String?
   over_labelled                                                                Boolean                 @default(false)
+  over_labelled_value                                                          String?
   manufacturer                                                                 String?
   country_of_license                                                           String?
+  country_of_license_value                                                     String?
   license_holder                                                               String?
+  license_holder_value                                                         String?
   license_number                                                               String?
+  license_number_value                                                         String?
   controlled_drug_status                                                       String?
   expiry_date                                                                  String?
   cytotoxic                                                                    Boolean                 @default(false)
+  cytotoxic_value                                                              String?
   storage                                                                      String?
+  storage_value                                                                String?
   manage_stock                                                                 Boolean                 @default(false)
   qty                                                                          Int?
+  quantity                                                                     Int?
   in_stock                                                                     Boolean                 @default(true)
   viewed                                                                       Int                     @default(0) @db.UnsignedInt
   is_active                                                                    Boolean
+  status                                                                       String?
   is_shortage                                                                  Boolean                 @default(false)
   shortage_reason                                                              String?                 @db.Text
   shortage_start_date                                                          DateTime?               @db.DateTime(0)
@@ -873,7 +887,7 @@ model products {
   product_translations                                                         product_translations[]
   product_variants                                                             product_variants[]
   product_variations                                                           product_variations[]
-  brands                                                                       brands?                 @relation(fields: [brand_id], references: [id], onUpdate: Restrict, map: "products_brand_id_foreign")
+  brands                                                                       brands?                 @relation(fields: [brand_id], references: [id], onUpdate: NoAction, map: "products_brand_id_foreign")
   related_products_related_products_product_idToproducts                       related_products[]      @relation("related_products_product_idToproducts")
   related_products_related_products_related_product_idToproducts               related_products[]      @relation("related_products_related_product_idToproducts")
   reviews                                                                      reviews[]
@@ -891,8 +905,8 @@ model related_products {
   related_product_id                                     Int       @db.UnsignedInt
   created_at                                             DateTime? @db.Timestamp(0)
   updated_at                                             DateTime? @db.Timestamp(0)
-  products_related_products_product_idToproducts         products  @relation("related_products_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "related_products_product_id_foreign")
-  products_related_products_related_product_idToproducts products  @relation("related_products_related_product_idToproducts", fields: [related_product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "related_products_related_product_id_foreign")
+  products_related_products_product_idToproducts         products  @relation("related_products_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "related_products_product_id_foreign")
+  products_related_products_related_product_idToproducts products  @relation("related_products_related_product_idToproducts", fields: [related_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "related_products_related_product_id_foreign")
 
   @@id([product_id, related_product_id])
   @@index([related_product_id], map: "related_products_related_product_id_foreign")
@@ -906,7 +920,7 @@ model reminders {
   completed_at DateTime? @db.DateTime(0)
   created_at   DateTime? @db.Timestamp(0)
   updated_at   DateTime? @db.Timestamp(0)
-  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reminders_user_id_foreign")
+  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reminders_user_id_foreign")
 
   @@index([user_id], map: "reminders_user_id_foreign")
 }
@@ -921,7 +935,7 @@ model reviews {
   is_approved   Boolean
   created_at    DateTime? @db.Timestamp(0)
   updated_at    DateTime? @db.Timestamp(0)
-  products      products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reviews_product_id_foreign")
+  products      products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "reviews_product_id_foreign")
 
   @@index([product_id], map: "reviews_product_id_index")
   @@index([reviewer_id], map: "reviews_reviewer_id_index")
@@ -932,7 +946,7 @@ model role_translations {
   role_id Int    @db.UnsignedInt
   locale  String
   name    String
-  roles   roles  @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "role_translations_role_id_foreign")
+  roles   roles  @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_translations_role_id_foreign")
 
   @@unique([role_id, locale], map: "role_translations_role_id_locale_unique")
 }
@@ -960,7 +974,7 @@ model setting_translations {
   setting_id Int      @db.UnsignedInt
   locale     String
   value      String?  @db.LongText
-  settings   settings @relation(fields: [setting_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "setting_translations_setting_id_foreign")
+  settings   settings @relation(fields: [setting_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "setting_translations_setting_id_foreign")
 
   @@unique([setting_id, locale], map: "setting_translations_setting_id_locale_unique")
 }
@@ -984,7 +998,7 @@ model slider_slide_translations {
   caption_2           String?
   call_to_action_text String?
   direction           String?
-  slider_slides       slider_slides @relation(fields: [slider_slide_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "slider_slide_translations_slider_slide_id_foreign")
+  slider_slides       slider_slides @relation(fields: [slider_slide_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "slider_slide_translations_slider_slide_id_foreign")
 
   @@unique([slider_slide_id, locale], map: "slider_slide_translations_slider_slide_id_locale_unique")
 }
@@ -999,7 +1013,7 @@ model slider_slides {
   created_at                DateTime?                   @db.Timestamp(0)
   updated_at                DateTime?                   @db.Timestamp(0)
   slider_slide_translations slider_slide_translations[]
-  sliders                   sliders                     @relation(fields: [slider_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "slider_slides_slider_id_foreign")
+  sliders                   sliders                     @relation(fields: [slider_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "slider_slides_slider_id_foreign")
 
   @@index([slider_id], map: "slider_slides_slider_id_foreign")
 }
@@ -1009,7 +1023,7 @@ model slider_translations {
   slider_id Int     @db.UnsignedInt
   locale    String
   name      String
-  sliders   sliders @relation(fields: [slider_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "slider_translations_slider_id_foreign")
+  sliders   sliders @relation(fields: [slider_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "slider_translations_slider_id_foreign")
 
   @@unique([slider_id, locale], map: "slider_translations_slider_id_locale_unique")
 }
@@ -1033,7 +1047,7 @@ model tag_translations {
   tag_id Int    @db.UnsignedInt
   locale String
   name   String
-  tags   tags   @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tag_translations_tag_id_foreign")
+  tags   tags   @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tag_translations_tag_id_foreign")
 
   @@unique([tag_id, locale], map: "tag_translations_tag_id_locale_unique")
 }
@@ -1052,7 +1066,7 @@ model tax_class_translations {
   tax_class_id Int         @db.UnsignedInt
   locale       String
   label        String
-  tax_classes  tax_classes @relation(fields: [tax_class_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tax_class_translations_tax_class_id_foreign")
+  tax_classes  tax_classes @relation(fields: [tax_class_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tax_class_translations_tax_class_id_foreign")
 
   @@unique([tax_class_id, locale], map: "tax_class_translations_tax_class_id_locale_unique")
 }
@@ -1072,7 +1086,7 @@ model tax_rate_translations {
   tax_rate_id Int       @db.UnsignedInt
   locale      String
   name        String
-  tax_rates   tax_rates @relation(fields: [tax_rate_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tax_rate_translations_tax_rate_id_foreign")
+  tax_rates   tax_rates @relation(fields: [tax_rate_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tax_rate_translations_tax_rate_id_foreign")
 
   @@unique([tax_rate_id, locale], map: "tax_rate_translations_tax_rate_id_locale_unique")
 }
@@ -1091,7 +1105,7 @@ model tax_rates {
   updated_at            DateTime?               @db.Timestamp(0)
   order_taxes           order_taxes[]
   tax_rate_translations tax_rate_translations[]
-  tax_classes           tax_classes             @relation(fields: [tax_class_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tax_rates_tax_class_id_foreign")
+  tax_classes           tax_classes             @relation(fields: [tax_class_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tax_rates_tax_class_id_foreign")
 
   @@index([tax_class_id], map: "tax_rates_tax_class_id_index")
 }
@@ -1103,7 +1117,7 @@ model throttle {
   ip         String?
   created_at DateTime? @db.Timestamp(0)
   updated_at DateTime? @db.Timestamp(0)
-  users      users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "throttle_user_id_foreign")
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "throttle_user_id_foreign")
 
   @@index([user_id], map: "throttle_user_id_foreign")
 }
@@ -1116,7 +1130,7 @@ model transactions {
   deleted_at     DateTime? @db.Timestamp(0)
   created_at     DateTime? @db.Timestamp(0)
   updated_at     DateTime? @db.Timestamp(0)
-  orders         orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "transactions_order_id_foreign")
+  orders         orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transactions_order_id_foreign")
 }
 
 model translation_translations {
@@ -1124,7 +1138,7 @@ model translation_translations {
   translation_id Int          @db.UnsignedInt
   locale         String
   value          String       @db.Text
-  translations   translations @relation(fields: [translation_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "translation_translations_translation_id_foreign")
+  translations   translations @relation(fields: [translation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "translation_translations_translation_id_foreign")
 
   @@unique([translation_id, locale], map: "translation_translations_translation_id_locale_unique")
 }
@@ -1144,8 +1158,8 @@ model up_sell_products {
   up_sell_product_id                                     Int       @db.UnsignedInt
   created_at                                             DateTime? @db.Timestamp(0)
   updated_at                                             DateTime? @db.Timestamp(0)
-  products_up_sell_products_product_idToproducts         products  @relation("up_sell_products_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "up_sell_products_product_id_foreign")
-  products_up_sell_products_up_sell_product_idToproducts products  @relation("up_sell_products_up_sell_product_idToproducts", fields: [up_sell_product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "up_sell_products_up_sell_product_id_foreign")
+  products_up_sell_products_product_idToproducts         products  @relation("up_sell_products_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "up_sell_products_product_id_foreign")
+  products_up_sell_products_up_sell_product_idToproducts products  @relation("up_sell_products_up_sell_product_idToproducts", fields: [up_sell_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "up_sell_products_up_sell_product_id_foreign")
 
   @@id([product_id, up_sell_product_id])
   @@index([up_sell_product_id], map: "up_sell_products_up_sell_product_id_foreign")
@@ -1161,8 +1175,8 @@ model user_roles {
   role_id    Int       @db.UnsignedInt
   created_at DateTime? @db.Timestamp(0)
   updated_at DateTime? @db.Timestamp(0)
-  roles      roles     @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_roles_role_id_foreign")
-  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_roles_user_id_foreign")
+  roles      roles     @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_roles_role_id_foreign")
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_roles_user_id_foreign")
 
   @@id([user_id, role_id])
   @@index([role_id], map: "user_roles_role_id_foreign")
@@ -1180,6 +1194,7 @@ model users {
   last_login        DateTime?           @db.DateTime(0)
   created_at        DateTime?           @db.Timestamp(0)
   updated_at        DateTime?           @db.Timestamp(0)
+  account_openings  account_openings?
   activations       activations[]
   addresses         addresses[]
   blog_posts        blog_posts[]
@@ -1190,6 +1205,51 @@ model users {
   user_profiles     user_profiles?
   user_roles        user_roles[]
   wish_lists        wish_lists[]
+}
+
+model account_openings {
+  id                 Int       @id @default(autoincrement()) @db.UnsignedInt
+  user_id            Int       @unique @db.UnsignedInt
+  customer_type      String    @db.VarChar(32)
+
+  company_name       String
+  trading_name       String?
+  registered_address String    @db.Text
+  warehouse_address  String?   @db.Text
+  telephone          String?
+  website            String?
+  company_house_no   String?
+  vat_no             String?
+
+  wda_no             String?
+  gdp_cert_no        String?
+  gdp_answers        Json?
+
+  license_reg_no     String?
+  cqc_reg_no         String?
+  cqc_address        String?   @db.Text
+
+  personnel          Json?
+
+  bank_name          String?
+  sort_code          String?
+  bank_address       String?
+  account_no         String?
+
+  confirm_accurate   Boolean   @default(false)
+  confirm_consent    Boolean   @default(false)
+  decl_name          String?
+  decl_position      String?
+  decl_sign          String?
+  decl_date          DateTime? @db.Date
+
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+  updated_at         DateTime? @default(now()) @updatedAt @db.Timestamp(0)
+
+  users              users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "account_openings_user_id_foreign")
+
+  @@index([user_id], map: "account_openings_user_id_index")
+  @@index([customer_type], map: "account_openings_customer_type_index")
 }
 
 model user_profiles {
@@ -1204,7 +1264,7 @@ model user_profiles {
   country        String?  @default("United Kingdom")
   created_at     DateTime @default(now()) @db.Timestamp(0)
   updated_at     DateTime @default(now()) @updatedAt @db.Timestamp(0)
-  users          users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_profiles_user_id_foreign")
+  users          users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_profiles_user_id_foreign")
 
   @@index([user_id], map: "user_profiles_user_id_index")
 }
@@ -1214,7 +1274,7 @@ model variation_translations {
   variation_id Int        @db.UnsignedInt
   locale       String
   name         String
-  variations   variations @relation(fields: [variation_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "variation_translations_variation_id_foreign")
+  variations   variations @relation(fields: [variation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "variation_translations_variation_id_foreign")
 
   @@unique([variation_id, locale], map: "variation_translations_variation_id_locale_unique")
 }
@@ -1224,7 +1284,7 @@ model variation_value_translations {
   variation_value_id Int              @db.UnsignedInt
   locale             String
   label              String
-  variation_values   variation_values @relation(fields: [variation_value_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "variation_value_translations_variation_value_id_foreign")
+  variation_values   variation_values @relation(fields: [variation_value_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "variation_value_translations_variation_value_id_foreign")
 
   @@unique([variation_value_id, locale], map: "variation_value_translations_variation_value_id_locale_unique")
 }
@@ -1239,7 +1299,7 @@ model variation_values {
   updated_at                     DateTime?                        @db.Timestamp(0)
   order_product_variation_values order_product_variation_values[]
   variation_value_translations   variation_value_translations[]
-  variations                     variations                       @relation(fields: [variation_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "variation_values_variation_id_foreign")
+  variations                     variations                       @relation(fields: [variation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "variation_values_variation_id_foreign")
 
   @@index([variation_id], map: "variation_values_variation_id_index")
 }
@@ -1264,8 +1324,8 @@ model wish_lists {
   product_id Int       @db.UnsignedInt
   created_at DateTime? @db.Timestamp(0)
   updated_at DateTime? @db.Timestamp(0)
-  products   products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "wish_lists_product_id_foreign")
-  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "wish_lists_user_id_foreign")
+  products   products  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wish_lists_product_id_foreign")
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wish_lists_user_id_foreign")
 
   @@id([user_id, product_id])
   @@index([product_id], map: "wish_lists_product_id_foreign")
@@ -1276,8 +1336,8 @@ model shortage_alternatives {
   alternative_product_id                                          Int       @db.UnsignedInt
   created_at                                                      DateTime? @db.Timestamp(0)
   updated_at                                                      DateTime? @db.Timestamp(0)
-  products_shortage_alternatives_alternative_product_idToproducts products  @relation("shortage_alternatives_alternative_product_idToproducts", fields: [alternative_product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "shortage_alternatives_alternative_product_id_foreign")
-  products_shortage_alternatives_product_idToproducts             products  @relation("shortage_alternatives_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "shortage_alternatives_product_id_foreign")
+  products_shortage_alternatives_alternative_product_idToproducts products  @relation("shortage_alternatives_alternative_product_idToproducts", fields: [alternative_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "shortage_alternatives_alternative_product_id_foreign")
+  products_shortage_alternatives_product_idToproducts             products  @relation("shortage_alternatives_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "shortage_alternatives_product_id_foreign")
 
   @@id([product_id, alternative_product_id])
   @@index([alternative_product_id], map: "shortage_alternatives_alternative_product_id_foreign")

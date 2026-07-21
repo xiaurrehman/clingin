@@ -3,9 +3,14 @@ import {
   Post,
   Body,
   Get,
+  Patch,
+  Delete,
   UseGuards,
   Request,
   Res,
+  Param,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -15,6 +20,7 @@ import { ActivateAccountDto } from './dto/activate-account.dto';
 import { ForgetPasswordDto } from './dto/forget-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyResetEmailDto } from './dto/verify-reset-email.dto';
+import { AccountOpeningDto } from './dto/account-opening.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -34,27 +40,30 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const tokens = await this.authService.signin(signinDto);
+    const isProd = process.env.NODE_ENV === 'production';
 
-    // ✅ ACCESS TOKEN COOKIE
+    // Localhost (different ports) is same-site; production cross-domain needs none+secure
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
-      sameSite: 'none', // 🔥 required for cross-origin
-      secure: true,    // true in production (HTTPS)
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd,
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
-    // ✅ OPTIONAL REFRESH TOKEN COOKIE
     if (tokens.refresh_token) {
       res.cookie('refresh_token', tokens.refresh_token, {
         httpOnly: true,
-        sameSite: 'none',
-        secure: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: isProd ? 'none' : 'lax',
+        secure: isProd,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
 
     return {
       message: 'Signin successful',
+      user: tokens.user,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
     };
   }
 
@@ -102,6 +111,55 @@ export class AuthController {
     return this.authService.getPendingActivations(req.user.sub);
   }
 
+  @Get('is-admin')
+  @UseGuards(JwtAuthGuard)
+  async checkIsAdmin(@Request() req) {
+    const isAdmin = await this.authService.isAdmin(req.user.sub);
+    return { isAdmin };
+  }
+
+  @Get('account-opening/me')
+  @UseGuards(JwtAuthGuard)
+  async getMyAccountOpening(@Request() req) {
+    return this.authService.getMyAccountOpening(req.user.sub);
+  }
+
+  @Patch('account-opening/me')
+  @UseGuards(JwtAuthGuard)
+  async updateMyAccountOpening(
+    @Request() req,
+    @Body() dto: AccountOpeningDto,
+  ) {
+    return this.authService.updateMyAccountOpening(req.user.sub, dto);
+  }
+
+  @Get('account-openings')
+  @UseGuards(JwtAuthGuard)
+  async getAccountOpenings(
+    @Request() req,
+    @Query('customerType') customerType?: string,
+  ) {
+    return this.authService.getAccountOpenings(req.user.sub, customerType);
+  }
+
+  @Get('account-openings/:id')
+  @UseGuards(JwtAuthGuard)
+  async getAccountOpeningById(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.authService.getAccountOpeningById(req.user.sub, id);
+  }
+
+  @Delete('account-openings/:id')
+  @UseGuards(JwtAuthGuard)
+  async deleteAccountOpening(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.authService.deleteAccountOpening(req.user.sub, id);
+  }
+
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Request() req) {
@@ -118,19 +176,35 @@ export class AuthController {
   @Post('refresh')
   async refresh(
     @Request() req,
+    @Body() body: { refreshToken?: string },
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refreshToken = req.cookies?.refresh_token;
-    const tokens = await this.authService.refreshToken(refreshToken);
+    const refreshToken = body?.refreshToken || req.cookies?.refresh_token;
+    const tokens = await this.authService.refreshToken({ refreshToken });
+    const isProd = process.env.NODE_ENV === 'production';
 
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
-      sameSite: 'none',
-      secure: true,
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd,
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    return { message: 'Token refreshed' };
+    if (tokens.refresh_token) {
+      res.cookie('refresh_token', tokens.refresh_token, {
+        httpOnly: true,
+        sameSite: isProd ? 'none' : 'lax',
+        secure: isProd,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
+
+    return {
+      message: 'Token refreshed',
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      user: tokens.user,
+    };
   }
 
   // ---------- LOGOUT ----------

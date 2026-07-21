@@ -10,7 +10,9 @@ import { ActivateAccountDto } from './dto/activate-account.dto';
 import { ForgetPasswordDto } from './dto/forget-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { AccountOpeningDto } from './dto/account-opening.dto';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 
 
 @Injectable()
@@ -27,6 +29,7 @@ export class AuthService {
     if (existing) throw new BadRequestException('Email already exist');
 
     const hashed = await bcrypt.hash(dto.password, 10);
+    const opening = dto.accountOpening;
 
     const user = await this.prisma.users.create({
       data: {
@@ -34,38 +37,120 @@ export class AuthService {
         last_name: dto.lastName,
         email: dto.email,
         password: hashed,
-        phone: dto.phone || '',
+        phone: dto.phone || opening?.telephone || '',
         created_at: new Date(),
         updated_at: new Date(),
       },
     });
 
-    // Create user profile with additional information
-    if (dto.jobRole || dto.licenseNumber || dto.extension || dto.instituteName ||
-        dto.addressLine1 || dto.townCity || dto.country) {
+    // Create user profile with additional information (legacy + mapped from opening)
+    const jobRole =
+      dto.jobRole ||
+      (opening?.customerType === 'wholesale'
+        ? 'Wholesale customer'
+        : opening?.customerType === 'clinic'
+          ? 'Doctor / pharmacy / dentist'
+          : undefined);
+    const licenseNumber =
+      dto.licenseNumber ||
+      opening?.wdaNo ||
+      opening?.licenseRegNo;
+    const instituteName = dto.instituteName || opening?.companyName;
+    const addressLine1 = dto.addressLine1 || opening?.registeredAddress;
+    const townCity = dto.townCity || opening?.tradingName || opening?.companyName;
+    const country = dto.country || 'United Kingdom';
+    const extension = dto.extension;
+
+    if (jobRole || licenseNumber || extension || instituteName || addressLine1 || townCity || country) {
       try {
         await this.prisma.user_profiles.create({
           data: {
             user_id: user.id,
-            job_role: dto.jobRole,
-            license_number: dto.licenseNumber,
-            extension: dto.extension,
-            institute_name: dto.instituteName,
-            address_line_1: dto.addressLine1,
-            town_city: dto.townCity,
-            country: dto.country || 'United Kingdom',
+            job_role: jobRole,
+            license_number: licenseNumber,
+            extension,
+            institute_name: instituteName,
+            address_line_1: addressLine1,
+            town_city: townCity,
+            country,
             created_at: new Date(),
             updated_at: new Date(),
           },
         });
       } catch (profileError) {
         console.error('Failed to create user profile:', profileError);
-        // Continue with signup even if profile creation fails
+      }
+    }
+
+    // Persist full HALO account opening application
+    if (opening) {
+      try {
+        const personnel =
+          opening.personnel ||
+          (opening.director || opening.rp || opening.finance || opening.purchase || opening.warehouse
+            ? {
+                director: opening.director,
+                rp: opening.rp,
+                finance: opening.finance,
+                purchase: opening.purchase,
+                warehouse: opening.warehouse,
+              }
+            : null);
+
+        let declDate: Date | null = null;
+        if (opening.declDate) {
+          const parsed = new Date(opening.declDate);
+          if (!Number.isNaN(parsed.getTime())) {
+            declDate = parsed;
+          }
+        }
+
+        await this.prisma.account_openings.create({
+          data: {
+            user_id: user.id,
+            customer_type: opening.customerType,
+            company_name: opening.companyName,
+            trading_name: opening.tradingName || null,
+            registered_address: opening.registeredAddress,
+            warehouse_address: opening.warehouseAddress || null,
+            telephone: opening.telephone || dto.phone || null,
+            website: opening.website || null,
+            company_house_no: opening.companyHouseNo || null,
+            vat_no: opening.vatNo || null,
+            wda_no: opening.wdaNo || null,
+            gdp_cert_no: opening.gdpCertNo || null,
+            gdp_answers:
+              opening.gdpAnswers != null
+                ? (opening.gdpAnswers as Prisma.InputJsonValue)
+                : undefined,
+            license_reg_no: opening.licenseRegNo || null,
+            cqc_reg_no: opening.cqcRegNo || null,
+            cqc_address: opening.cqcAddress || null,
+            personnel:
+              personnel != null
+                ? (JSON.parse(JSON.stringify(personnel)) as Prisma.InputJsonValue)
+                : undefined,
+            bank_name: opening.bankName || null,
+            sort_code: opening.sortCode || null,
+            bank_address: opening.bankAddress || null,
+            account_no: opening.accountNo || null,
+            confirm_accurate: Boolean(opening.confirmAccurate),
+            confirm_consent: Boolean(opening.confirmConsent),
+            decl_name: opening.declName || null,
+            decl_position: opening.declPosition || null,
+            decl_sign: opening.declSign || null,
+            decl_date: declDate,
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        });
+      } catch (openingError) {
+        console.error('Failed to create account opening record:', openingError);
+        // Do not fail signup if opening persist fails — user account already created
       }
     }
 
     // Create activation record - user needs admin approval
-    // First, delete any existing activation records for this user
     await this.prisma.activations.deleteMany({
       where: { user_id: user.id },
     });
@@ -80,22 +165,20 @@ export class AuthService {
       },
     });
 
-    // Send activation code to user (for reference, not for user activation) - non-blocking
     this.mailService.sendActivationCode(dto.email, activationCode).catch(error => {
       console.error('Failed to send activation email:', error);
     });
 
-    // Generate tokens for the newly created user
     const payload = { sub: user.id, email: user.email };
     const expiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '15m';
     const options: JwtSignOptions = { expiresIn: expiresIn as any };
     const access_token = this.jwtService.sign(payload, options);
-
-    // Generate a refresh token
     const refresh_token = await this.generateRefreshToken(user.id);
 
     return {
-      message: "User created successfully. Account pending admin approval",
+      message: opening
+        ? 'Account application submitted successfully. Account pending admin approval'
+        : 'User created successfully. Account pending admin approval',
       activationCode,
       access_token: access_token,
       refresh_token: refresh_token,
@@ -105,7 +188,8 @@ export class AuthService {
         firstName: user.first_name,
         lastName: user.last_name,
       },
-      activationRecord
+      activationRecord,
+      hasAccountOpening: Boolean(opening),
     };
   }
 
@@ -489,6 +573,337 @@ export class AuthService {
       userLastName: activation.users.last_name,
       createdAt: activation.created_at,
     }));
+  }
+
+  /** Customer: get own HALO account opening application */
+  async getMyAccountOpening(userId: number) {
+    const row = await this.prisma.account_openings.findUnique({
+      where: { user_id: userId },
+      include: {
+        users: {
+          select: {
+            id: true,
+            email: true,
+            first_name: true,
+            last_name: true,
+            phone: true,
+            created_at: true,
+            activations: {
+              select: {
+                id: true,
+                completed: true,
+                completed_at: true,
+                created_at: true,
+              },
+              orderBy: { created_at: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    if (!row) {
+      throw new NotFoundException('No account application found for this user');
+    }
+
+    return this.mapAccountOpening(row);
+  }
+
+  /** Customer: update own HALO account opening details */
+  async updateMyAccountOpening(userId: number, dto: AccountOpeningDto) {
+    const existing = await this.prisma.account_openings.findUnique({
+      where: { user_id: userId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('No account application found for this user');
+    }
+
+    // Keep original customer type — users cannot switch wholesale ↔ clinic
+    const customerType = existing.customer_type as 'wholesale' | 'clinic';
+
+    const personnel =
+      dto.personnel ||
+      (dto.director || dto.rp || dto.finance || dto.purchase || dto.warehouse
+        ? {
+            director: dto.director,
+            rp: dto.rp,
+            finance: dto.finance,
+            purchase: dto.purchase,
+            warehouse: dto.warehouse,
+          }
+        : null);
+
+    let declDate: Date | null = null;
+    if (dto.declDate) {
+      const parsed = new Date(dto.declDate);
+      if (!Number.isNaN(parsed.getTime())) {
+        declDate = parsed;
+      }
+    }
+
+    const updated = await this.prisma.account_openings.update({
+      where: { id: existing.id },
+      data: {
+        company_name: dto.companyName,
+        trading_name: dto.tradingName || null,
+        registered_address: dto.registeredAddress,
+        warehouse_address: dto.warehouseAddress || null,
+        telephone: dto.telephone || null,
+        website: dto.website || null,
+        company_house_no: dto.companyHouseNo || null,
+        vat_no: dto.vatNo || null,
+        wda_no: customerType === 'wholesale' ? dto.wdaNo || null : null,
+        gdp_cert_no: customerType === 'wholesale' ? dto.gdpCertNo || null : null,
+        gdp_answers:
+          customerType === 'wholesale' && dto.gdpAnswers != null
+            ? (dto.gdpAnswers as Prisma.InputJsonValue)
+            : existing.gdp_answers ?? undefined,
+        license_reg_no: customerType === 'clinic' ? dto.licenseRegNo || null : null,
+        cqc_reg_no: customerType === 'clinic' ? dto.cqcRegNo || null : null,
+        cqc_address: customerType === 'clinic' ? dto.cqcAddress || null : null,
+        personnel:
+          personnel != null
+            ? (JSON.parse(JSON.stringify(personnel)) as Prisma.InputJsonValue)
+            : undefined,
+        bank_name: dto.bankName || null,
+        sort_code: dto.sortCode || null,
+        bank_address: dto.bankAddress || null,
+        account_no: dto.accountNo || null,
+        confirm_accurate:
+          dto.confirmAccurate != null
+            ? Boolean(dto.confirmAccurate)
+            : existing.confirm_accurate,
+        confirm_consent:
+          dto.confirmConsent != null
+            ? Boolean(dto.confirmConsent)
+            : existing.confirm_consent,
+        decl_name: dto.declName || null,
+        decl_position: dto.declPosition || null,
+        decl_sign: dto.declSign || null,
+        decl_date: declDate ?? existing.decl_date,
+        updated_at: new Date(),
+      },
+      include: {
+        users: {
+          select: {
+            id: true,
+            email: true,
+            first_name: true,
+            last_name: true,
+            phone: true,
+            created_at: true,
+            activations: {
+              select: {
+                id: true,
+                completed: true,
+                completed_at: true,
+                created_at: true,
+              },
+              orderBy: { created_at: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    // Keep legacy user_profiles in sync with company details
+    try {
+      await this.prisma.user_profiles.update({
+        where: { user_id: userId },
+        data: {
+          institute_name: dto.companyName,
+          address_line_1: dto.registeredAddress,
+          license_number:
+            customerType === 'wholesale'
+              ? dto.wdaNo || null
+              : dto.licenseRegNo || null,
+          updated_at: new Date(),
+        },
+      });
+    } catch (profileError) {
+      console.error('Failed to sync user profile from account opening:', profileError);
+    }
+
+    if (dto.telephone) {
+      await this.prisma.users.update({
+        where: { id: userId },
+        data: { phone: dto.telephone, updated_at: new Date() },
+      });
+    }
+
+    return this.mapAccountOpening(updated);
+  }
+
+  /** Admin: list all HALO account opening applications */
+  async getAccountOpenings(adminId: number, customerType?: string) {
+    if (!(await this.isAdmin(adminId))) {
+      throw new ForbiddenException('Only admins can view account applications');
+    }
+
+    const where =
+      customerType === 'wholesale' || customerType === 'clinic'
+        ? { customer_type: customerType }
+        : {};
+
+    const rows = await this.prisma.account_openings.findMany({
+      where,
+      include: {
+        users: {
+          select: {
+            id: true,
+            email: true,
+            first_name: true,
+            last_name: true,
+            phone: true,
+            created_at: true,
+            activations: {
+              select: {
+                id: true,
+                completed: true,
+                completed_at: true,
+                created_at: true,
+              },
+              orderBy: { created_at: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    return rows.map((row) => this.mapAccountOpening(row));
+  }
+
+  /** Admin: single account opening application with full detail */
+  async getAccountOpeningById(adminId: number, id: number) {
+    if (!(await this.isAdmin(adminId))) {
+      throw new ForbiddenException('Only admins can view account applications');
+    }
+
+    const row = await this.prisma.account_openings.findUnique({
+      where: { id },
+      include: {
+        users: {
+          select: {
+            id: true,
+            email: true,
+            first_name: true,
+            last_name: true,
+            phone: true,
+            created_at: true,
+            activations: {
+              select: {
+                id: true,
+                completed: true,
+                completed_at: true,
+                created_at: true,
+              },
+              orderBy: { created_at: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    if (!row) {
+      throw new NotFoundException('Account application not found');
+    }
+
+    return this.mapAccountOpening(row);
+  }
+
+  /** Admin: delete a HALO account opening application */
+  async deleteAccountOpening(adminId: number, id: number) {
+    if (!(await this.isAdmin(adminId))) {
+      throw new ForbiddenException('Only admins can delete account applications');
+    }
+
+    const row = await this.prisma.account_openings.findUnique({
+      where: { id },
+      select: { id: true, user_id: true, company_name: true },
+    });
+
+    if (!row) {
+      throw new NotFoundException('Account application not found');
+    }
+
+    await this.prisma.account_openings.delete({
+      where: { id: row.id },
+    });
+
+    return {
+      message: 'Account application deleted successfully',
+      id: row.id,
+      userId: row.user_id,
+      companyName: row.company_name,
+    };
+  }
+
+  private mapAccountOpening(row: any) {
+    const activation = row.users?.activations?.[0] ?? null;
+    return {
+      id: row.id,
+      userId: row.user_id,
+      customerType: row.customer_type,
+      company: {
+        companyName: row.company_name,
+        tradingName: row.trading_name,
+        registeredAddress: row.registered_address,
+        warehouseAddress: row.warehouse_address,
+        telephone: row.telephone,
+        website: row.website,
+        companyHouseNo: row.company_house_no,
+        vatNo: row.vat_no,
+      },
+      wholesale:
+        row.customer_type === 'wholesale'
+          ? {
+              wdaNo: row.wda_no,
+              gdpCertNo: row.gdp_cert_no,
+              gdpAnswers: row.gdp_answers ?? {},
+            }
+          : null,
+      clinic:
+        row.customer_type === 'clinic'
+          ? {
+              licenseRegNo: row.license_reg_no,
+              cqcRegNo: row.cqc_reg_no,
+              cqcAddress: row.cqc_address,
+            }
+          : null,
+      personnel: row.personnel ?? null,
+      bank: {
+        bankName: row.bank_name,
+        sortCode: row.sort_code,
+        bankAddress: row.bank_address,
+        accountNo: row.account_no,
+      },
+      declaration: {
+        confirmAccurate: row.confirm_accurate,
+        confirmConsent: row.confirm_consent,
+        declName: row.decl_name,
+        declPosition: row.decl_position,
+        declSign: row.decl_sign,
+        declDate: row.decl_date,
+      },
+      login: {
+        userId: row.users?.id,
+        email: row.users?.email,
+        firstName: row.users?.first_name,
+        lastName: row.users?.last_name,
+        phone: row.users?.phone,
+        registeredAt: row.users?.created_at,
+        accountActivated: activation ? Boolean(activation.completed) : false,
+        activationCompletedAt: activation?.completed_at ?? null,
+      },
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
   }
 
   // Generate a refresh token and store it in the database
