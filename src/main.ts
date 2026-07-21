@@ -38,6 +38,8 @@ async function bootstrap() {
     credentials: true,                
   });
 
-  await app.listen(process.env.PORT || 3000);
+  // Hostinger injects PORT; bind 0.0.0.0 so the proxy can reach the app
+  const port = Number(process.env.PORT) || 3000;
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap();

@@ -603,8 +603,9 @@ export class AuthService {
       },
     });
 
+    // No application yet (legacy users / incomplete signup) — not an error
     if (!row) {
-      throw new NotFoundException('No account application found for this user');
+      return null;
     }
 
     return this.mapAccountOpening(row);
