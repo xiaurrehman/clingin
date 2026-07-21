@@ -9,7 +9,7 @@
     "node": "20.x"
   },
   "scripts": {
-    "build": "node node_modules/@nestjs/cli/bin/nest.js build",
+    "build": "node -e \"try{require('fs').rmSync('dist',{recursive:true,force:true})}catch(e){}\" && node node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "start:dev": "node node_modules/@nestjs/cli/bin/nest.js start --watch",
     "start:debug": "node node_modules/@nestjs/cli/bin/nest.js start --debug --watch",
