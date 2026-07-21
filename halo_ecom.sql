@@ -1788,8 +1788,7 @@ CREATE TABLE `account_openings` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_openings_user_id_key` (`user_id`),
   KEY `account_openings_user_id_index` (`user_id`),
-  KEY `account_openings_customer_type_index` (`customer_type`),
-  CONSTRAINT `account_openings_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
+  KEY `account_openings_customer_type_index` (`customer_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -1811,8 +1810,7 @@ CREATE TABLE `user_profiles` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_profiles_user_id_key` (`user_id`),
-  KEY `user_profiles_user_id_index` (`user_id`),
-  CONSTRAINT `user_profiles_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
+  KEY `user_profiles_user_id_index` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -3093,6 +3091,12 @@ ALTER TABLE `variation_value_translations`
 --
 
 --
+-- Constraints for table `account_openings`
+--
+ALTER TABLE `account_openings`
+  ADD CONSTRAINT `account_openings_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
+
+--
 -- Constraints for table `activations`
 --
 ALTER TABLE `activations`
@@ -3508,6 +3512,12 @@ ALTER TABLE `translation_translations`
 ALTER TABLE `up_sell_products`
   ADD CONSTRAINT `up_sell_products_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `up_sell_products_up_sell_product_id_foreign` FOREIGN KEY (`up_sell_product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_profiles`
+--
+ALTER TABLE `user_profiles`
+  ADD CONSTRAINT `user_profiles_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 --
 -- Constraints for table `user_roles`

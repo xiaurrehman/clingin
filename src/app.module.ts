@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { ProductsModule } from './modules/products/products.module';
@@ -11,6 +11,7 @@ import { SharedModule } from './modules/shared/shared.module';
 
 @Module({
   imports: [
+    PrismaModule,
     AuthModule,
     UserModule,
     ProductsModule,
@@ -19,6 +20,6 @@ import { SharedModule } from './modules/shared/shared.module';
     SharedModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService],
 })
 export class AppModule {}
