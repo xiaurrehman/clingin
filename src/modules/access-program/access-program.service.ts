@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
