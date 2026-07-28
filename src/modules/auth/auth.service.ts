@@ -25,8 +25,43 @@ export class AuthService {
   ) { }
 
   async signup(dto: SignupDto) {
-    const existing = await this.prisma.users.findUnique({ where: { email: dto.email } });
-    if (existing) throw new BadRequestException('Email already exist');
+    const existing = await this.prisma.users.findUnique({
+      where: { email: dto.email },
+      include: {
+        account_openings: { select: { id: true, status: true } },
+        activations: {
+          select: { id: true, completed: true },
+          orderBy: { created_at: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (existing) {
+      const openingStatus = existing.account_openings?.status;
+      const isActivated =
+        existing.activations?.[0]?.completed === true ||
+        openingStatus === 'activated';
+
+      if (isActivated) {
+        throw new BadRequestException(
+          'An account with this email already exists. Please sign in.',
+        );
+      }
+
+      if (openingStatus === 'pending') {
+        throw new BadRequestException(
+          'An application with this email is already pending admin approval.',
+        );
+      }
+
+      if (openingStatus === 'rejected') {
+        return this.reapplyAfterRejection(existing.id, dto);
+      }
+
+      // Existing user without a clear rejected opening — block duplicate signup
+      throw new BadRequestException('Email already exist');
+    }
 
     const hashed = await bcrypt.hash(dto.password, 10);
     const opening = dto.accountOpening;
@@ -43,129 +78,10 @@ export class AuthService {
       },
     });
 
-    // Create user profile with additional information (legacy + mapped from opening)
-    const jobRole =
-      dto.jobRole ||
-      (opening?.customerType === 'wholesale'
-        ? 'Wholesale customer'
-        : opening?.customerType === 'clinic'
-          ? 'Doctor / pharmacy / dentist'
-          : undefined);
-    const licenseNumber =
-      dto.licenseNumber ||
-      opening?.wdaNo ||
-      opening?.licenseRegNo;
-    const instituteName = dto.instituteName || opening?.companyName;
-    const addressLine1 = dto.addressLine1 || opening?.registeredAddress;
-    const townCity = dto.townCity || opening?.tradingName || opening?.companyName;
-    const country = dto.country || 'United Kingdom';
-    const extension = dto.extension;
+    await this.upsertUserProfileFromSignup(user.id, dto);
+    await this.persistAccountOpening(user.id, dto, { create: true });
+    await this.resetPendingActivation(user.id);
 
-    if (jobRole || licenseNumber || extension || instituteName || addressLine1 || townCity || country) {
-      try {
-        await this.prisma.user_profiles.create({
-          data: {
-            user_id: user.id,
-            job_role: jobRole,
-            license_number: licenseNumber,
-            extension,
-            institute_name: instituteName,
-            address_line_1: addressLine1,
-            town_city: townCity,
-            country,
-            created_at: new Date(),
-            updated_at: new Date(),
-          },
-        });
-      } catch (profileError) {
-        console.error('Failed to create user profile:', profileError);
-      }
-    }
-
-    // Persist full HALO account opening application
-    if (opening) {
-      try {
-        const personnel =
-          opening.personnel ||
-          (opening.director || opening.rp || opening.finance || opening.purchase || opening.warehouse
-            ? {
-                director: opening.director,
-                rp: opening.rp,
-                finance: opening.finance,
-                purchase: opening.purchase,
-                warehouse: opening.warehouse,
-              }
-            : null);
-
-        let declDate: Date | null = null;
-        if (opening.declDate) {
-          const parsed = new Date(opening.declDate);
-          if (!Number.isNaN(parsed.getTime())) {
-            declDate = parsed;
-          }
-        }
-
-        await this.prisma.account_openings.create({
-          data: {
-            user_id: user.id,
-            customer_type: opening.customerType,
-            status: 'pending',
-            company_name: opening.companyName,
-            trading_name: opening.tradingName || null,
-            registered_address: opening.registeredAddress,
-            warehouse_address: opening.warehouseAddress || null,
-            telephone: opening.telephone || dto.phone || null,
-            website: opening.website || null,
-            company_house_no: opening.companyHouseNo || null,
-            vat_no: opening.vatNo || null,
-            wda_no: opening.wdaNo || null,
-            gdp_cert_no: opening.gdpCertNo || null,
-            gdp_answers:
-              opening.gdpAnswers != null
-                ? (opening.gdpAnswers as Prisma.InputJsonValue)
-                : undefined,
-            license_reg_no: opening.licenseRegNo || null,
-            cqc_reg_no: opening.cqcRegNo || null,
-            cqc_address: opening.cqcAddress || null,
-            personnel:
-              personnel != null
-                ? (JSON.parse(JSON.stringify(personnel)) as Prisma.InputJsonValue)
-                : undefined,
-            bank_name: opening.bankName || null,
-            sort_code: opening.sortCode || null,
-            bank_address: opening.bankAddress || null,
-            account_no: opening.accountNo || null,
-            confirm_accurate: Boolean(opening.confirmAccurate),
-            confirm_consent: Boolean(opening.confirmConsent),
-            decl_name: opening.declName || null,
-            decl_position: opening.declPosition || null,
-            decl_sign: opening.declSign || null,
-            decl_date: declDate,
-            created_at: new Date(),
-            updated_at: new Date(),
-          },
-        });
-      } catch (openingError) {
-        console.error('Failed to create account opening record:', openingError);
-        // Do not fail signup if opening persist fails — user account already created
-      }
-    }
-
-    // Pending activation — only an admin can approve (no self-serve email link)
-    await this.prisma.activations.deleteMany({
-      where: { user_id: user.id },
-    });
-
-    await this.prisma.activations.create({
-      data: {
-        user_id: user.id,
-        code: generateSixDigitCode(),
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
-
-    // Notify admin only — applicants wait for approval before sign-in
     this.notifyAdminOfNewApplication({
       userId: user.id,
       firstName: user.first_name,
@@ -190,6 +106,227 @@ export class AuthService {
       },
       hasAccountOpening: Boolean(opening),
     };
+  }
+
+  /** Rejected applicants may submit again with the same email. */
+  private async reapplyAfterRejection(userId: number, dto: SignupDto) {
+    const hashed = await bcrypt.hash(dto.password, 10);
+    const opening = dto.accountOpening;
+
+    const user = await this.prisma.users.update({
+      where: { id: userId },
+      data: {
+        first_name: dto.firstName,
+        last_name: dto.lastName,
+        password: hashed,
+        phone: dto.phone || opening?.telephone || '',
+        updated_at: new Date(),
+      },
+    });
+
+    await this.upsertUserProfileFromSignup(user.id, dto);
+    await this.persistAccountOpening(user.id, dto, { create: false });
+    await this.resetPendingActivation(user.id);
+
+    this.notifyAdminOfNewApplication({
+      userId: user.id,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      phone: user.phone || undefined,
+      companyName: opening?.companyName,
+      customerType: opening?.customerType,
+    }).catch((error) => {
+      console.error('Failed to send admin new-application email:', error);
+    });
+
+    return {
+      message:
+        'Account application resubmitted successfully. Pending admin approval',
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+      },
+      hasAccountOpening: Boolean(opening),
+      resubmitted: true,
+    };
+  }
+
+  private async upsertUserProfileFromSignup(userId: number, dto: SignupDto) {
+    const opening = dto.accountOpening;
+    const jobRole =
+      dto.jobRole ||
+      (opening?.customerType === 'wholesale'
+        ? 'Wholesale customer'
+        : opening?.customerType === 'clinic'
+          ? 'Doctor / pharmacy / dentist'
+          : undefined);
+    const licenseNumber =
+      dto.licenseNumber || opening?.wdaNo || opening?.licenseRegNo;
+    const instituteName = dto.instituteName || opening?.companyName;
+    const addressLine1 = dto.addressLine1 || opening?.registeredAddress;
+    const townCity = dto.townCity || opening?.tradingName || opening?.companyName;
+    const country = dto.country || 'United Kingdom';
+    const extension = dto.extension;
+
+    if (
+      !(
+        jobRole ||
+        licenseNumber ||
+        extension ||
+        instituteName ||
+        addressLine1 ||
+        townCity ||
+        country
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await this.prisma.user_profiles.upsert({
+        where: { user_id: userId },
+        create: {
+          user_id: userId,
+          job_role: jobRole,
+          license_number: licenseNumber,
+          extension,
+          institute_name: instituteName,
+          address_line_1: addressLine1,
+          town_city: townCity,
+          country,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        update: {
+          job_role: jobRole,
+          license_number: licenseNumber,
+          extension,
+          institute_name: instituteName,
+          address_line_1: addressLine1,
+          town_city: townCity,
+          country,
+          updated_at: new Date(),
+        },
+      });
+    } catch (profileError) {
+      console.error('Failed to upsert user profile:', profileError);
+    }
+  }
+
+  private async persistAccountOpening(
+    userId: number,
+    dto: SignupDto,
+    opts: { create: boolean },
+  ) {
+    const opening = dto.accountOpening;
+    if (!opening) return;
+
+    const personnel =
+      opening.personnel ||
+      (opening.director ||
+      opening.rp ||
+      opening.finance ||
+      opening.purchase ||
+      opening.warehouse
+        ? {
+            director: opening.director,
+            rp: opening.rp,
+            finance: opening.finance,
+            purchase: opening.purchase,
+            warehouse: opening.warehouse,
+          }
+        : null);
+
+    let declDate: Date | null = null;
+    if (opening.declDate) {
+      const parsed = new Date(opening.declDate);
+      if (!Number.isNaN(parsed.getTime())) {
+        declDate = parsed;
+      }
+    }
+
+    const data = {
+      customer_type: opening.customerType,
+      status: 'pending' as const,
+      rejected_at: null,
+      rejection_reason: null,
+      company_name: opening.companyName,
+      trading_name: opening.tradingName || null,
+      registered_address: opening.registeredAddress,
+      warehouse_address: opening.warehouseAddress || null,
+      telephone: opening.telephone || dto.phone || null,
+      website: opening.website || null,
+      company_house_no: opening.companyHouseNo || null,
+      vat_no: opening.vatNo || null,
+      wda_no: opening.wdaNo || null,
+      gdp_cert_no: opening.gdpCertNo || null,
+      gdp_answers:
+        opening.gdpAnswers != null
+          ? (opening.gdpAnswers as Prisma.InputJsonValue)
+          : undefined,
+      license_reg_no: opening.licenseRegNo || null,
+      cqc_reg_no: opening.cqcRegNo || null,
+      cqc_address: opening.cqcAddress || null,
+      personnel:
+        personnel != null
+          ? (JSON.parse(JSON.stringify(personnel)) as Prisma.InputJsonValue)
+          : undefined,
+      bank_name: opening.bankName || null,
+      sort_code: opening.sortCode || null,
+      bank_address: opening.bankAddress || null,
+      account_no: opening.accountNo || null,
+      confirm_accurate: Boolean(opening.confirmAccurate),
+      confirm_consent: Boolean(opening.confirmConsent),
+      decl_name: opening.declName || null,
+      decl_position: opening.declPosition || null,
+      decl_sign: opening.declSign || null,
+      decl_date: declDate,
+      updated_at: new Date(),
+    };
+
+    try {
+      if (opts.create) {
+        await this.prisma.account_openings.create({
+          data: {
+            user_id: userId,
+            ...data,
+            created_at: new Date(),
+          },
+        });
+      } else {
+        await this.prisma.account_openings.update({
+          where: { user_id: userId },
+          data,
+        });
+      }
+    } catch (openingError) {
+      console.error('Failed to persist account opening record:', openingError);
+      if (!opts.create) {
+        throw new BadRequestException(
+          'Could not resubmit the previous application. Please contact support.',
+        );
+      }
+    }
+  }
+
+  private async resetPendingActivation(userId: number) {
+    await this.prisma.activations.deleteMany({
+      where: { user_id: userId },
+    });
+
+    await this.prisma.activations.create({
+      data: {
+        user_id: userId,
+        code: generateSixDigitCode(),
+        completed: false,
+        completed_at: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
   }
 
   // Admin-only method to activate user account
