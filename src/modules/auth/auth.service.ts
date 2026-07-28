@@ -151,45 +151,43 @@ export class AuthService {
       }
     }
 
-    // Create activation record - user needs admin approval
+    // Pending activation — only an admin can approve (no self-serve email link)
     await this.prisma.activations.deleteMany({
       where: { user_id: user.id },
     });
 
-    const activationCode = generateSixDigitCode();
-    const activationRecord = await this.prisma.activations.create({
+    await this.prisma.activations.create({
       data: {
         user_id: user.id,
-        code: activationCode,
+        code: generateSixDigitCode(),
         created_at: new Date(),
         updated_at: new Date(),
       },
     });
 
-    this.mailService.sendActivationCode(dto.email, activationCode).catch(error => {
-      console.error('Failed to send activation email:', error);
+    // Notify admin only — applicants wait for approval before sign-in
+    this.notifyAdminOfNewApplication({
+      userId: user.id,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      phone: user.phone || undefined,
+      companyName: opening?.companyName,
+      customerType: opening?.customerType,
+    }).catch((error) => {
+      console.error('Failed to send admin new-application email:', error);
     });
-
-    const payload = { sub: user.id, email: user.email };
-    const expiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '15m';
-    const options: JwtSignOptions = { expiresIn: expiresIn as any };
-    const access_token = this.jwtService.sign(payload, options);
-    const refresh_token = await this.generateRefreshToken(user.id);
 
     return {
       message: opening
-        ? 'Account application submitted successfully. Account pending admin approval'
-        : 'User created successfully. Account pending admin approval',
-      activationCode,
-      access_token: access_token,
-      refresh_token: refresh_token,
+        ? 'Account application submitted successfully. Pending admin approval'
+        : 'User created successfully. Pending admin approval',
       user: {
         id: user.id,
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
       },
-      activationRecord,
       hasAccountOpening: Boolean(opening),
     };
   }
@@ -327,124 +325,18 @@ export class AuthService {
   }
 
   // Alternative method: Allow activation with code (for initial setup or special cases)
-  async activateAccountWithCode(dto: ActivateAccountDto) {
-    // Find the activation record by code - get the most recent one if multiple exist
-    const activation = await this.prisma.activations.findFirst({
-      where: { 
-        code: dto.code,
-        completed: false 
-      },
-      include: {
-        users: true
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
-    });
-
-    if (!activation) {
-      // Check if the code exists but is already completed
-      const completedActivation = await this.prisma.activations.findFirst({
-        where: { code: dto.code, completed: true },
-        include: { users: true }
-      });
-
-      if (completedActivation) {
-        throw new BadRequestException('Activation code has already been used');
-      }
-      throw new BadRequestException('Invalid or expired activation code');
-    }
-
-    // Check if activation is expired (24 hours from creation)
-    const now = new Date();
-    const createdAt = new Date(activation.created_at || now);
-    const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-    
-    if (hoursSinceCreation > 24) {
-      throw new BadRequestException('Activation code has expired. Please request a new one');
-    }
-
-    // Update the activation as completed
-    const updatedActivation = await this.prisma.activations.update({
-      where: { id: activation.id },
-      data: {
-        completed: true,
-        completed_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
-
-    await this.prisma.account_openings.updateMany({
-      where: { user_id: activation.user_id },
-      data: {
-        status: 'activated',
-        rejected_at: null,
-        rejection_reason: null,
-        updated_at: new Date(),
-      },
-    });
-
-    // Generate tokens for the activated user
-    const payload = { sub: activation.user_id, email: activation.users.email };
-    const expiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '15m';
-    const options: JwtSignOptions = { expiresIn: expiresIn as any };
-    const accessToken = this.jwtService.sign(payload, options);
-
-    // Generate a refresh token
-    const refreshToken = await this.generateRefreshToken(activation.user_id);
-
-    return {
-      message: 'Account activated successfully',
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      user: {
-        id: activation.user_id,
-        email: activation.users.email,
-        firstName: activation.users.first_name,
-        lastName: activation.users.last_name,
-      }
-    };
+  async activateAccountWithCode(_dto: ActivateAccountDto) {
+    // Self-serve email activation is disabled — only admins can approve accounts
+    throw new BadRequestException(
+      'Email activation is not available. Your application must be approved by an administrator before you can sign in.',
+    );
   }
 
   // Resend activation code
-  async resendActivationCode(email: string) {
-    const user = await this.prisma.users.findUnique({ where: { email } });
-    if (!user) throw new BadRequestException('User not found with this email');
-
-    // Check if user already has an activated account
-    const existingActivation = await this.prisma.activations.findFirst({
-      where: { user_id: user.id, completed: true },
-    });
-
-    if (existingActivation) {
-      throw new BadRequestException('Account is already activated. Please login');
-    }
-
-    // Delete any existing activation records
-    await this.prisma.activations.deleteMany({
-      where: { user_id: user.id },
-    });
-
-    // Generate new activation code
-    const activationCode = generateSixDigitCode();
-    const activationRecord = await this.prisma.activations.create({
-      data: {
-        user_id: user.id,
-        code: activationCode,
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
-
-    // Send activation code to user - non-blocking
-    this.mailService.sendActivationCode(email, activationCode).catch(error => {
-      console.error('Failed to send activation email:', error);
-    });
-
-    return {
-      message: 'Activation code resent successfully',
-      activationCode, // In development, return the code
-    };
+  async resendActivationCode(_email: string) {
+    throw new BadRequestException(
+      'Activation codes are not sent by email. Please wait for an administrator to approve your application.',
+    );
   }
 
   async signin(dto: SigninDto) {
@@ -454,15 +346,6 @@ export class AuthService {
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) throw new BadRequestException('Incorrect Password');
 
-    // Check if account is activated
-    const activation = await this.prisma.activations.findFirst({
-      where: { user_id: user.id },
-    });
-
-    if (activation && !activation.completed) {
-      throw new UnauthorizedException('Account not activated. Please contact admin for activation');
-    }
-
     const opening = await this.prisma.account_openings.findUnique({
       where: { user_id: user.id },
       select: { status: true },
@@ -471,6 +354,23 @@ export class AuthService {
     if (opening?.status === 'rejected') {
       throw new UnauthorizedException(
         'Your account application was rejected. Please contact support.',
+      );
+    }
+
+    if (opening?.status === 'pending') {
+      throw new UnauthorizedException(
+        'Your account application is pending admin approval. You will be able to sign in once it is approved.',
+      );
+    }
+
+    // Check if account is activated (covers users without an opening record)
+    const activation = await this.prisma.activations.findFirst({
+      where: { user_id: user.id },
+    });
+
+    if (activation && !activation.completed) {
+      throw new UnauthorizedException(
+        'Your account is pending admin approval. You will be able to sign in once it is approved.',
       );
     }
 
@@ -625,6 +525,53 @@ export class AuthService {
       id: ur.roles.id,
       name: ur.roles.role_translations[0]?.name || 'Unknown',
     }));
+  }
+
+  /** Resolve store admin inbox (same source as order notifications). */
+  private async resolveAdminEmail(): Promise<string | null> {
+    const fromEnv =
+      this.configService.get<string>('ADMIN_EMAIL') ||
+      this.configService.get<string>('STORE_EMAIL');
+    if (fromEnv?.trim()) return fromEnv.trim();
+
+    const adminSetting = await this.prisma.settings.findUnique({
+      where: { key: 'store_email' },
+    });
+    if (!adminSetting?.plain_value) return null;
+
+    let adminEmail = adminSetting.plain_value;
+    const phpSerializedMatch = adminSetting.plain_value.match(/s:\d+:"([^"]+)"/);
+    if (phpSerializedMatch) {
+      adminEmail = phpSerializedMatch[1];
+    }
+    return adminEmail?.trim() || null;
+  }
+
+  private async notifyAdminOfNewApplication(details: {
+    userId: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    companyName?: string;
+    customerType?: string;
+  }): Promise<void> {
+    const adminEmail = await this.resolveAdminEmail();
+    if (!adminEmail) {
+      console.warn(
+        'No admin email configured (ADMIN_EMAIL / store_email); skipped new-application notification',
+      );
+      return;
+    }
+
+    await this.mailService.sendAdminNewAccountApplicationNotification(adminEmail, {
+      applicantName: `${details.firstName} ${details.lastName}`.trim(),
+      applicantEmail: details.email,
+      phone: details.phone,
+      companyName: details.companyName,
+      customerType: details.customerType,
+      userId: details.userId,
+    });
   }
 
   // Method to check if user is admin

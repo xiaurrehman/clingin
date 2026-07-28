@@ -55,6 +55,43 @@ export class MailService {
     await this.sendMail(email, subject, html);
   }
 
+  async sendAdminNewAccountApplicationNotification(
+    adminEmail: string,
+    details: {
+      applicantName: string;
+      applicantEmail: string;
+      phone?: string;
+      companyName?: string;
+      customerType?: string;
+      userId: number;
+    },
+  ): Promise<void> {
+    const frontendUrl =
+      this.configService.get('USER_FRONTEND_URL') ||
+      process.env.FRONTEND_URL ||
+      'http://localhost:3001';
+    const subject = `New account application — ${details.companyName || details.applicantEmail}`;
+    const typeLabel =
+      details.customerType === 'wholesale'
+        ? 'Wholesale customer'
+        : details.customerType === 'clinic'
+          ? 'Doctor / pharmacy / dentist'
+          : details.customerType || 'N/A';
+    const html = `
+      <h2>New Account Application</h2>
+      <p>A new customer has submitted an account opening application and is waiting for admin approval.</p>
+      <h3>Applicant</h3>
+      <p><strong>Name:</strong> ${details.applicantName}</p>
+      <p><strong>Email:</strong> ${details.applicantEmail}</p>
+      <p><strong>Phone:</strong> ${details.phone || 'N/A'}</p>
+      <p><strong>Company:</strong> ${details.companyName || 'N/A'}</p>
+      <p><strong>Account type:</strong> ${typeLabel}</p>
+      <p><strong>User ID:</strong> ${details.userId}</p>
+      <p><a href="${frontendUrl}/admin/account-applications">Review account applications</a></p>
+    `;
+    await this.sendMail(adminEmail, subject, html);
+  }
+
   async sendAccountRejectedNotification(
     email: string,
     reason?: string,
