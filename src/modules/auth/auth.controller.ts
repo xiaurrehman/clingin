@@ -80,6 +80,17 @@ export class AuthController {
     return this.authService.activateAccountByAdmin(userId, adminId);
   }
 
+  @Post('reject-account-by-admin')
+  @UseGuards(JwtAuthGuard)
+  async rejectAccountByAdmin(
+    @Body('userId') userId: number,
+    @Body('reason') reason: string | undefined,
+    @Request() req,
+  ) {
+    const adminId = req.user.sub;
+    return this.authService.rejectAccountByAdmin(userId, adminId, reason);
+  }
+
   @Post('resend-activation-code')
   async resendActivationCode(@Body('email') email: string) {
     return this.authService.resendActivationCode(email);

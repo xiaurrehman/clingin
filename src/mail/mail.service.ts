@@ -55,6 +55,23 @@ export class MailService {
     await this.sendMail(email, subject, html);
   }
 
+  async sendAccountRejectedNotification(
+    email: string,
+    reason?: string,
+  ): Promise<void> {
+    const subject = 'Account Application Rejected';
+    const reasonBlock = reason
+      ? `<p><strong>Reason:</strong> ${reason}</p>`
+      : '';
+    const html = `
+      <h2>Your Account Application Was Rejected</h2>
+      <p>Unfortunately, your account opening application was not approved.</p>
+      ${reasonBlock}
+      <p>If you believe this is a mistake, please contact support.</p>
+    `;
+    await this.sendMail(email, subject, html);
+  }
+
   async sendAdminOrderNotification(
     adminEmail: string,
     orderDetails: {

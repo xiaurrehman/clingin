@@ -109,6 +109,7 @@ export class AuthService {
           data: {
             user_id: user.id,
             customer_type: opening.customerType,
+            status: 'pending',
             company_name: opening.companyName,
             trading_name: opening.tradingName || null,
             registered_address: opening.registeredAddress,
@@ -231,6 +232,17 @@ export class AuthService {
       },
     });
 
+    // Mark the HALO application as activated
+    await this.prisma.account_openings.updateMany({
+      where: { user_id: userId },
+      data: {
+        status: 'activated',
+        rejected_at: null,
+        rejection_reason: null,
+        updated_at: new Date(),
+      },
+    });
+
     // Optionally, send notification to user about account activation
     const user = await this.prisma.users.findUnique({
       where: { id: userId }
@@ -245,6 +257,72 @@ export class AuthService {
       user: {
         id: userId,
       }
+    };
+  }
+
+  /** Admin: reject a pending account opening application */
+  async rejectAccountByAdmin(
+    userId: number,
+    adminId: number,
+    reason?: string,
+  ) {
+    if (!(await this.isAdmin(adminId))) {
+      throw new ForbiddenException('Only admins can reject accounts');
+    }
+
+    const opening = await this.prisma.account_openings.findUnique({
+      where: { user_id: userId },
+    });
+
+    if (!opening) {
+      throw new NotFoundException('Account application not found for this user');
+    }
+
+    if (opening.status === 'activated') {
+      throw new BadRequestException('Activated accounts cannot be rejected');
+    }
+
+    if (opening.status === 'rejected') {
+      throw new BadRequestException('Application is already rejected');
+    }
+
+    const updated = await this.prisma.account_openings.update({
+      where: { id: opening.id },
+      data: {
+        status: 'rejected',
+        rejected_at: new Date(),
+        rejection_reason: reason?.trim() || null,
+        updated_at: new Date(),
+      },
+    });
+
+    // Keep activation incomplete so the user cannot sign in
+    await this.prisma.activations.updateMany({
+      where: { user_id: userId, completed: false },
+      data: { updated_at: new Date() },
+    });
+
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId },
+    });
+
+    if (user) {
+      this.mailService
+        .sendAccountRejectedNotification(user.email, reason?.trim())
+        .catch((error) => {
+          console.error('Failed to send rejection email:', error);
+        });
+    }
+
+    return {
+      message: 'Application rejected successfully',
+      application: {
+        id: updated.id,
+        userId,
+        status: updated.status,
+        rejectedAt: updated.rejected_at,
+        rejectionReason: updated.rejection_reason,
+      },
     };
   }
 
@@ -292,6 +370,16 @@ export class AuthService {
       data: {
         completed: true,
         completed_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+
+    await this.prisma.account_openings.updateMany({
+      where: { user_id: activation.user_id },
+      data: {
+        status: 'activated',
+        rejected_at: null,
+        rejection_reason: null,
         updated_at: new Date(),
       },
     });
@@ -373,6 +461,17 @@ export class AuthService {
 
     if (activation && !activation.completed) {
       throw new UnauthorizedException('Account not activated. Please contact admin for activation');
+    }
+
+    const opening = await this.prisma.account_openings.findUnique({
+      where: { user_id: user.id },
+      select: { status: true },
+    });
+
+    if (opening?.status === 'rejected') {
+      throw new UnauthorizedException(
+        'Your account application was rejected. Please contact support.',
+      );
     }
 
     const payload = { sub: user.id, email: user.email };
@@ -847,10 +946,24 @@ export class AuthService {
 
   private mapAccountOpening(row: any) {
     const activation = row.users?.activations?.[0] ?? null;
+    const activationCompleted = activation ? Boolean(activation.completed) : false;
+    let status: 'pending' | 'activated' | 'rejected' =
+      row.status === 'rejected' || row.status === 'activated' || row.status === 'pending'
+        ? row.status
+        : 'pending';
+
+    // Keep status in sync with activation for older rows
+    if (status !== 'rejected' && activationCompleted) {
+      status = 'activated';
+    }
+
     return {
       id: row.id,
       userId: row.user_id,
       customerType: row.customer_type,
+      status,
+      rejectedAt: row.rejected_at ?? null,
+      rejectionReason: row.rejection_reason ?? null,
       company: {
         companyName: row.company_name,
         tradingName: row.trading_name,
@@ -899,7 +1012,7 @@ export class AuthService {
         lastName: row.users?.last_name,
         phone: row.users?.phone,
         registeredAt: row.users?.created_at,
-        accountActivated: activation ? Boolean(activation.completed) : false,
+        accountActivated: activationCompleted,
         activationCompletedAt: activation?.completed_at ?? null,
       },
       createdAt: row.created_at,
