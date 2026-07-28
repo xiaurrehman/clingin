@@ -94,17 +94,24 @@ export class MailService {
 
   async sendAccountRejectedNotification(
     email: string,
-    reason?: string,
+    reason: string,
   ): Promise<void> {
-    const subject = 'Account Application Rejected';
-    const reasonBlock = reason
-      ? `<p><strong>Reason:</strong> ${reason}</p>`
-      : '';
+    const subject = 'Your Halo Direct account application was rejected';
+    const safeReason = reason
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/\n/g, '<br />');
     const html = `
       <h2>Your Account Application Was Rejected</h2>
-      <p>Unfortunately, your account opening application was not approved.</p>
-      ${reasonBlock}
-      <p>If you believe this is a mistake, please contact support.</p>
+      <p>Unfortunately, your Halo Direct account opening application was not approved.</p>
+      <p><strong>Reason for rejection:</strong></p>
+      <p style="padding:12px 16px;background:#f8f8fb;border-left:3px solid #d8503b;border-radius:4px;">
+        ${safeReason}
+      </p>
+      <p>If you believe this is a mistake or need further information, please contact support.</p>
     `;
     await this.sendMail(email, subject, html);
   }

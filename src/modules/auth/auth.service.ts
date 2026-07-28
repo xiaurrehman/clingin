@@ -268,6 +268,13 @@ export class AuthService {
       throw new ForbiddenException('Only admins can reject accounts');
     }
 
+    const rejectionReason = reason?.trim();
+    if (!rejectionReason) {
+      throw new BadRequestException(
+        'Please provide a reason for rejecting this application. The applicant will receive it by email.',
+      );
+    }
+
     const opening = await this.prisma.account_openings.findUnique({
       where: { user_id: userId },
     });
@@ -289,7 +296,7 @@ export class AuthService {
       data: {
         status: 'rejected',
         rejected_at: new Date(),
-        rejection_reason: reason?.trim() || null,
+        rejection_reason: rejectionReason,
         updated_at: new Date(),
       },
     });
@@ -305,15 +312,19 @@ export class AuthService {
     });
 
     if (user) {
-      this.mailService
-        .sendAccountRejectedNotification(user.email, reason?.trim())
-        .catch((error) => {
-          console.error('Failed to send rejection email:', error);
-        });
+      try {
+        await this.mailService.sendAccountRejectedNotification(
+          user.email,
+          rejectionReason,
+        );
+      } catch (error) {
+        console.error('Failed to send rejection email:', error);
+        // Rejection still stands even if email delivery fails
+      }
     }
 
     return {
-      message: 'Application rejected successfully',
+      message: 'Application rejected successfully. The applicant has been emailed the reason.',
       application: {
         id: updated.id,
         userId,
