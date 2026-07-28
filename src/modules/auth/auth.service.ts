@@ -28,7 +28,14 @@ export class AuthService {
     const existing = await this.prisma.users.findUnique({
       where: { email: dto.email },
       include: {
-        account_openings: { select: { id: true, status: true } },
+        account_openings: {
+          select: {
+            id: true,
+            status: true,
+            rejected_at: true,
+            rejection_reason: true,
+          },
+        },
         activations: {
           select: { id: true, completed: true },
           orderBy: { created_at: 'desc' },
@@ -38,7 +45,8 @@ export class AuthService {
     });
 
     if (existing) {
-      const openingStatus = existing.account_openings?.status;
+      const opening = existing.account_openings;
+      const openingStatus = opening?.status;
       const isActivated =
         existing.activations?.[0]?.completed === true ||
         openingStatus === 'activated';
@@ -55,12 +63,8 @@ export class AuthService {
         );
       }
 
-      if (openingStatus === 'rejected') {
-        return this.reapplyAfterRejection(existing.id, dto);
-      }
-
-      // Existing user without a clear rejected opening — block duplicate signup
-      throw new BadRequestException('Email already exist');
+      // Rejected / legacy / incomplete rows can submit a fresh application
+      return this.reapplyAfterRejection(existing.id, dto);
     }
 
     const hashed = await bcrypt.hash(dto.password, 10);
@@ -79,7 +83,7 @@ export class AuthService {
     });
 
     await this.upsertUserProfileFromSignup(user.id, dto);
-    await this.persistAccountOpening(user.id, dto, { create: true });
+    await this.persistAccountOpening(user.id, dto);
     await this.resetPendingActivation(user.id);
 
     this.notifyAdminOfNewApplication({
@@ -125,7 +129,7 @@ export class AuthService {
     });
 
     await this.upsertUserProfileFromSignup(user.id, dto);
-    await this.persistAccountOpening(user.id, dto, { create: false });
+    await this.persistAccountOpening(user.id, dto);
     await this.resetPendingActivation(user.id);
 
     this.notifyAdminOfNewApplication({
@@ -216,11 +220,7 @@ export class AuthService {
     }
   }
 
-  private async persistAccountOpening(
-    userId: number,
-    dto: SignupDto,
-    opts: { create: boolean },
-  ) {
+  private async persistAccountOpening(userId: number, dto: SignupDto) {
     const opening = dto.accountOpening;
     if (!opening) return;
 
@@ -288,27 +288,20 @@ export class AuthService {
     };
 
     try {
-      if (opts.create) {
-        await this.prisma.account_openings.create({
-          data: {
-            user_id: userId,
-            ...data,
-            created_at: new Date(),
-          },
-        });
-      } else {
-        await this.prisma.account_openings.update({
-          where: { user_id: userId },
-          data,
-        });
-      }
+      await this.prisma.account_openings.upsert({
+        where: { user_id: userId },
+        create: {
+          user_id: userId,
+          ...data,
+          created_at: new Date(),
+        },
+        update: data,
+      });
     } catch (openingError) {
       console.error('Failed to persist account opening record:', openingError);
-      if (!opts.create) {
-        throw new BadRequestException(
-          'Could not resubmit the previous application. Please contact support.',
-        );
-      }
+      throw new BadRequestException(
+        'Could not save the account application. Please try again or contact support.',
+      );
     }
   }
 
