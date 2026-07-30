@@ -63,12 +63,13 @@ export class AuthService {
         );
       }
 
-      // Rejected / legacy / incomplete rows can submit a fresh application
+      // Rejected applications (or legacy rows with no opening) can submit again
+      // with the same email — updates the existing user and resets to pending.
       return this.reapplyAfterRejection(existing.id, dto);
     }
 
     const hashed = await bcrypt.hash(dto.password, 10);
-    const opening = dto.accountOpening;
+    const openingDto = dto.accountOpening;
 
     const user = await this.prisma.users.create({
       data: {
@@ -76,7 +77,7 @@ export class AuthService {
         last_name: dto.lastName,
         email: dto.email,
         password: hashed,
-        phone: dto.phone || opening?.telephone || '',
+        phone: dto.phone || openingDto?.telephone || '',
         created_at: new Date(),
         updated_at: new Date(),
       },
@@ -86,20 +87,26 @@ export class AuthService {
     await this.persistAccountOpening(user.id, dto);
     await this.resetPendingActivation(user.id);
 
+    const openingRecord = await this.prisma.account_openings.findUnique({
+      where: { user_id: user.id },
+      select: { id: true },
+    });
+
     this.notifyAdminOfNewApplication({
       userId: user.id,
       firstName: user.first_name,
       lastName: user.last_name,
       email: user.email,
       phone: user.phone || undefined,
-      companyName: opening?.companyName,
-      customerType: opening?.customerType,
+      companyName: openingDto?.companyName,
+      customerType: openingDto?.customerType,
+      applicationId: openingRecord?.id,
     }).catch((error) => {
       console.error('Failed to send admin new-application email:', error);
     });
 
     return {
-      message: opening
+      message: openingDto
         ? 'Account application submitted successfully. Pending admin approval'
         : 'User created successfully. Pending admin approval',
       user: {
@@ -108,7 +115,7 @@ export class AuthService {
         firstName: user.first_name,
         lastName: user.last_name,
       },
-      hasAccountOpening: Boolean(opening),
+      hasAccountOpening: Boolean(openingDto),
     };
   }
 
@@ -132,6 +139,11 @@ export class AuthService {
     await this.persistAccountOpening(user.id, dto);
     await this.resetPendingActivation(user.id);
 
+    const openingRecord = await this.prisma.account_openings.findUnique({
+      where: { user_id: user.id },
+      select: { id: true },
+    });
+
     this.notifyAdminOfNewApplication({
       userId: user.id,
       firstName: user.first_name,
@@ -140,6 +152,7 @@ export class AuthService {
       phone: user.phone || undefined,
       companyName: opening?.companyName,
       customerType: opening?.customerType,
+      applicationId: openingRecord?.id,
     }).catch((error) => {
       console.error('Failed to send admin new-application email:', error);
     });
@@ -494,7 +507,7 @@ export class AuthService {
 
     if (opening?.status === 'rejected') {
       throw new UnauthorizedException(
-        'Your account application was rejected. Please contact support.',
+        'Your account application was rejected. You may submit a new application by signing up again with this email.',
       );
     }
 
@@ -696,6 +709,7 @@ export class AuthService {
     phone?: string;
     companyName?: string;
     customerType?: string;
+    applicationId?: number;
   }): Promise<void> {
     const adminEmail = await this.resolveAdminEmail();
     if (!adminEmail) {
@@ -712,6 +726,7 @@ export class AuthService {
       companyName: details.companyName,
       customerType: details.customerType,
       userId: details.userId,
+      applicationId: details.applicationId,
     });
   }
 
@@ -1005,7 +1020,7 @@ export class AuthService {
     return this.mapAccountOpening(row);
   }
 
-  /** Admin: delete a HALO account opening application */
+  /** Admin: delete a HALO account opening application and its login user */
   async deleteAccountOpening(adminId: number, id: number) {
     if (!(await this.isAdmin(adminId))) {
       throw new ForbiddenException('Only admins can delete account applications');
@@ -1020,14 +1035,39 @@ export class AuthService {
       throw new NotFoundException('Account application not found');
     }
 
-    await this.prisma.account_openings.delete({
-      where: { id: row.id },
+    if (row.user_id === adminId) {
+      throw new BadRequestException('You cannot delete your own account');
+    }
+
+    const userId = row.user_id;
+
+    // Remove application + login account so this email can no longer sign in.
+    // Related rows (activations, sessions, profile, etc.) cascade from users.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.account_openings.delete({
+        where: { id: row.id },
+      });
+
+      await tx.persistences.deleteMany({ where: { user_id: userId } });
+      await tx.reminders.deleteMany({ where: { user_id: userId } });
+      await tx.activations.deleteMany({ where: { user_id: userId } });
+      await tx.user_roles.deleteMany({ where: { user_id: userId } });
+      await tx.wish_lists.deleteMany({ where: { user_id: userId } });
+      await tx.throttle.deleteMany({ where: { user_id: userId } });
+      await tx.user_profiles.deleteMany({ where: { user_id: userId } });
+      await tx.default_addresses.deleteMany({ where: { customer_id: userId } });
+      await tx.addresses.deleteMany({ where: { customer_id: userId } });
+
+      await tx.users.delete({
+        where: { id: userId },
+      });
     });
 
     return {
-      message: 'Account application deleted successfully',
+      message:
+        'Account application and login account deleted successfully. This email can no longer sign in.',
       id: row.id,
-      userId: row.user_id,
+      userId,
       companyName: row.company_name,
     };
   }
