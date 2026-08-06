@@ -46,11 +46,13 @@ export class MailService {
   }
 
   async sendAccountActivatedNotification(email: string): Promise<void> {
+    const frontendUrl = this.getFrontendUrl();
     const subject = 'Account Activated';
     const html = `
       <h2>Your Account Has Been Activated</h2>
       <p>Your account has been successfully activated by an administrator.</p>
       <p>You can now log in to your account.</p>
+      <p><a href="${frontendUrl}/signin">Log in to your account</a></p>
     `;
     await this.sendMail(email, subject, html);
   }
@@ -67,11 +69,7 @@ export class MailService {
       applicationId?: number;
     },
   ): Promise<void> {
-    const frontendUrl = (
-      this.configService.get('USER_FRONTEND_URL') ||
-      process.env.FRONTEND_URL ||
-      'http://localhost:3001'
-    ).replace(/\/$/, '');
+    const frontendUrl = this.getFrontendUrl();
 
     const escapeHtml = (value: string) =>
       value
@@ -213,8 +211,7 @@ export class MailService {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;')
       .replace(/\n/g, '<br />');
-    const frontendUrl =
-      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+    const frontendUrl = this.getFrontendUrl();
     const html = `
       <h2>Your Account Application Was Rejected</h2>
       <p>Unfortunately, your Halo Direct account opening application was not approved.</p>
@@ -262,8 +259,15 @@ export class MailService {
     await this.sendMail(adminEmail, subject, html);
   }
 
+  private getFrontendUrl(): string {
+    return (
+      this.configService.get<string>('USER_FRONTEND_URL') ||
+      process.env.FRONTEND_URL ||
+      'https://halodirect.io'
+    ).replace(/\/$/, '');
+  }
+
   private getActivationLink(code: string): string {
-    // Adjust frontend URL as needed
-    return `${process.env.FRONTEND_URL || 'http://localhost:3001'}/activate?code=${code} `;
+    return `${this.getFrontendUrl()}/activate?code=${code}`;
   }
 }
