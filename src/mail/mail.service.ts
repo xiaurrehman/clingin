@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -9,6 +10,7 @@ export class MailService {
   constructor(private configService: ConfigService) {
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASS');
+    const localAddress = this.configService.get<string>('SMTP_LOCAL_ADDRESS');
 
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('SMTP_HOST') || 'localhost',
@@ -18,9 +20,10 @@ export class MailService {
       name: 'halodirect.io',
       // Hostinger outbound defaults to IPv6; Google only allowlisted 194.11.154.67
       family: 4,
+      ...(localAddress ? { localAddress } : {}),
       // Google SMTP relay trusts the Hostinger IP — omit AUTH when no credentials
       ...(user && pass ? { auth: { user, pass } } : {}),
-    });
+    } as SMTPTransport.Options);
   }
 
   async sendMail(to: string, subject: string, html: string): Promise<void> {
