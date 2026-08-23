@@ -7,19 +7,24 @@ export class MailService {
   private transporter: nodemailer.Transporter;
 
   constructor(private configService: ConfigService) {
+    const user = this.configService.get<string>('SMTP_USER');
+    const pass = this.configService.get<string>('SMTP_PASS');
+
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('SMTP_HOST') || 'localhost',
       port: parseInt(this.configService.get('SMTP_PORT') || '587', 10),
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: this.configService.get('SMTP_USER') || '',
-        pass: this.configService.get('SMTP_PASS') || '',
-      },
+      secure: false, // true for 465, STARTTLS for 587
+      requireTLS: true,
+      // Google SMTP relay trusts the Hostinger IP — omit AUTH when no credentials
+      ...(user && pass ? { auth: { user, pass } } : {}),
     });
   }
 
   async sendMail(to: string, subject: string, html: string): Promise<void> {
-    const from = this.configService.get('MAIL_FROM') || this.configService.get('SMTP_USER') || 'noreply@example.com';
+    const from =
+      this.configService.get('MAIL_FROM') ||
+      this.configService.get('SMTP_USER') ||
+      'info@halodirect.io';
     await this.transporter.sendMail({ from, to, subject, html });
   }
 
