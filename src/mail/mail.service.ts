@@ -16,6 +16,8 @@ export class MailService {
       secure: false, // true for 465, STARTTLS for 587
       requireTLS: true,
       name: 'halodirect.io',
+      // Hostinger outbound defaults to IPv6; Google only allowlisted 194.11.154.67
+      family: 4,
       // Google SMTP relay trusts the Hostinger IP — omit AUTH when no credentials
       ...(user && pass ? { auth: { user, pass } } : {}),
     });

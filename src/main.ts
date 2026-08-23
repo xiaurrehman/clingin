@@ -4,6 +4,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { HTTPExceptionFilter, AllExceptionsFilter } from './common/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
+import { setDefaultResultOrder } from 'node:dns';
+
+// Prefer IPv4 so Google SMTP relay sees 194.11.154.67, not Hostinger IPv6
+setDefaultResultOrder('ipv4first');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
