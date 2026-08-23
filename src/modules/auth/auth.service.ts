@@ -360,6 +360,16 @@ export class AuthService {
     });
 
     if (!activation) {
+      const alreadyActivated = await this.prisma.activations.findFirst({
+        where: { user_id: userId, completed: true },
+        orderBy: { completed_at: 'desc' },
+      });
+      if (alreadyActivated) {
+        return {
+          message: 'Account activated successfully',
+          user: { id: userId },
+        };
+      }
       throw new BadRequestException('No pending activation found for this user');
     }
 
@@ -390,7 +400,12 @@ export class AuthService {
     });
 
     if (user) {
-      await this.mailService.sendAccountActivatedNotification(user.email);
+      try {
+        await this.mailService.sendAccountActivatedNotification(user.email);
+      } catch (error) {
+        console.error('Failed to send account-activated email:', error);
+        // Approval still stands even if email delivery fails
+      }
     }
 
     return {

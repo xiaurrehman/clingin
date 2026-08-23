@@ -15,6 +15,7 @@ export class MailService {
       port: parseInt(this.configService.get('SMTP_PORT') || '587', 10),
       secure: false, // true for 465, STARTTLS for 587
       requireTLS: true,
+      name: 'halodirect.io',
       // Google SMTP relay trusts the Hostinger IP — omit AUTH when no credentials
       ...(user && pass ? { auth: { user, pass } } : {}),
     });
