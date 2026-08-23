@@ -10,7 +10,6 @@ export class MailService {
   constructor(private configService: ConfigService) {
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASS');
-    const localAddress = this.configService.get<string>('SMTP_LOCAL_ADDRESS');
 
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('SMTP_HOST') || 'localhost',
@@ -18,9 +17,8 @@ export class MailService {
       secure: false, // true for 465, STARTTLS for 587
       requireTLS: true,
       name: 'halodirect.io',
-      // Hostinger outbound defaults to IPv6; Google only allowlisted 194.11.154.67
+      // Prefer IPv4. Do not bind localAddress — 194.11.154.67 is NAT, not a local NIC.
       family: 4,
-      ...(localAddress ? { localAddress } : {}),
       // Google SMTP relay trusts the Hostinger IP — omit AUTH when no credentials
       ...(user && pass ? { auth: { user, pass } } : {}),
     } as SMTPTransport.Options);
