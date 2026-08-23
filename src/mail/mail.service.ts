@@ -2,24 +2,46 @@ import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { ConfigService } from '@nestjs/config';
+import { lookup } from 'node:dns/promises';
 
 @Injectable()
 export class MailService {
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private transporterReady: Promise<nodemailer.Transporter> | null = null;
 
-  constructor(private configService: ConfigService) {
+  constructor(private configService: ConfigService) {}
+
+  private async getTransporter(): Promise<nodemailer.Transporter> {
+    if (this.transporter) return this.transporter;
+    if (this.transporterReady) return this.transporterReady;
+
+    this.transporterReady = this.createTransporter();
+    this.transporter = await this.transporterReady;
+    return this.transporter;
+  }
+
+  private async createTransporter(): Promise<nodemailer.Transporter> {
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASS');
+    const hostName = this.configService.get<string>('SMTP_HOST') || 'localhost';
+    let host = hostName;
 
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get('SMTP_HOST') || 'localhost',
+    // Nodemailer family:4 is ignored here; Hostinger still connects over IPv6.
+    // Resolve an A record so the relay sees public IPv4 194.11.154.67.
+    try {
+      const resolved = await lookup(hostName, { family: 4 });
+      host = resolved.address;
+    } catch {
+      host = hostName;
+    }
+
+    return nodemailer.createTransport({
+      host,
       port: parseInt(this.configService.get('SMTP_PORT') || '587', 10),
-      secure: false, // true for 465, STARTTLS for 587
+      secure: false,
       requireTLS: true,
       name: 'halodirect.io',
-      // Prefer IPv4. Do not bind localAddress — 194.11.154.67 is NAT, not a local NIC.
-      family: 4,
-      // Google SMTP relay trusts the Hostinger IP — omit AUTH when no credentials
+      tls: { servername: hostName },
       ...(user && pass ? { auth: { user, pass } } : {}),
     } as SMTPTransport.Options);
   }
@@ -29,7 +51,8 @@ export class MailService {
       this.configService.get('MAIL_FROM') ||
       this.configService.get('SMTP_USER') ||
       'info@halodirect.io';
-    await this.transporter.sendMail({ from, to, subject, html });
+    const transporter = await this.getTransporter();
+    await transporter.sendMail({ from, to, subject, html });
   }
 
   async sendActivationCode(email: string, code: string): Promise<void> {
